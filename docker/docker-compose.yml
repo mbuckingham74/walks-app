@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  walks-api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: walks-api
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - "8000:8000"
+    networks:
+      - walks-network
+      - mysql-network
+    depends_on: []
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  walks-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: walks-frontend
+    restart: unless-stopped
+    ports:
+      - "3080:80"
+    networks:
+      - walks-network
+    depends_on:
+      - walks-api
+
+networks:
+  walks-network:
+    driver: bridge
+  mysql-network:
+    external: true
+    name: mysql-network
