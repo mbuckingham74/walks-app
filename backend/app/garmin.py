@@ -1,11 +1,16 @@
 import logging
+import os
 from datetime import date, timedelta
+from pathlib import Path
+
+import garth
 from garminconnect import Garmin
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 METERS_TO_MILES = 0.000621371
+TOKENS_PATH = Path("/app/garth_tokens")
 
 
 class GarminClient:
@@ -14,14 +19,26 @@ class GarminClient:
         self.client = None
 
     async def connect(self):
-        """Authenticate with Garmin Connect."""
+        """Authenticate with Garmin Connect using saved tokens."""
         try:
-            self.client = Garmin(
-                self.settings.garmin_email,
-                self.settings.garmin_password
-            )
-            self.client.login()
-            logger.info("Successfully connected to Garmin Connect")
+            # Try to load saved tokens first
+            if TOKENS_PATH.exists():
+                logger.info("Loading saved Garmin tokens...")
+                garth.resume(str(TOKENS_PATH))
+
+                # Create Garmin client with the authenticated garth session
+                self.client = Garmin()
+                self.client.garth = garth.client
+                logger.info("Successfully connected to Garmin Connect using saved tokens")
+            else:
+                # Fall back to password login (will fail if MFA required)
+                logger.info("No saved tokens, attempting password login...")
+                self.client = Garmin(
+                    self.settings.garmin_email,
+                    self.settings.garmin_password
+                )
+                self.client.login()
+                logger.info("Successfully connected to Garmin Connect")
         except Exception as e:
             logger.error(f"Failed to connect to Garmin: {e}")
             raise

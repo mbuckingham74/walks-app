@@ -29,6 +29,8 @@ services:
     restart: unless-stopped
     env_file:
       - ../.env
+    volumes:
+      - walks-garth-tokens:/app/garth_tokens
     networks:
       - walks-network
     depends_on:
@@ -55,6 +57,7 @@ services:
 
 volumes:
   walks-mysql-data:
+  walks-garth-tokens:
 
 networks:
   walks-network:
