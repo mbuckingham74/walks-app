@@ -1,6 +1,26 @@
 version: '3.8'
 
 services:
+  walks-mysql:
+    image: mysql:8.0
+    container_name: walks-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - walks-mysql-data:/var/lib/mysql
+      - ../backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    networks:
+      - walks-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   walks-api:
     build:
       context: ../backend
@@ -9,12 +29,11 @@ services:
     restart: unless-stopped
     env_file:
       - ../.env
-    ports:
-      - "8000:8000"
     networks:
       - walks-network
-      - mysql-network
-    depends_on: []
+    depends_on:
+      walks-mysql:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -34,9 +53,9 @@ services:
     depends_on:
       - walks-api
 
+volumes:
+  walks-mysql-data:
+
 networks:
   walks-network:
     driver: bridge
-  mysql-network:
-    external: true
-    name: mysql-network
