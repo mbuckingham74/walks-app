@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 
 from app.config import get_settings
-from app.database import get_db, init_db
+from app.database import get_db, init_db, async_session
 from app.models import Activity, DailySteps, SyncLog, RouteProgress, SyncType, SyncStatus
 from app.schemas import (
     ActivitySchema, DailyStepsSchema, SyncStatusSchema,
@@ -54,69 +54,83 @@ app.add_middleware(
 
 async def perform_sync(
     sync_type: SyncType,
-    db: AsyncSession,
+    sync_log_id: int,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None
 ):
-    """Background task to sync data from Garmin."""
-    sync_log = SyncLog(sync_type=sync_type, status=SyncStatus.running)
-    db.add(sync_log)
-    await db.commit()
-    await db.refresh(sync_log)
+    """Background task to sync data from Garmin.
 
-    records_fetched = 0
+    Creates its own database session to avoid issues with request-scoped sessions.
+    Updates the existing SyncLog by ID rather than creating a duplicate.
+    """
+    async with async_session() as db:
+        records_fetched = 0
 
-    try:
-        garmin = get_garmin_client()
-        await garmin.connect()
+        try:
+            # Fetch the existing sync log
+            result = await db.execute(select(SyncLog).where(SyncLog.id == sync_log_id))
+            sync_log = result.scalar_one_or_none()
+            if not sync_log:
+                logger.error(f"Sync log {sync_log_id} not found")
+                return
 
-        if not start_date:
-            start_date = date(2020, 1, 1)
-        if not end_date:
-            end_date = date.today()
+            garmin = get_garmin_client()
+            await garmin.connect()
 
-        if sync_type in (SyncType.activities, SyncType.full):
-            activities = garmin.get_activities(start_date, end_date)
-            for act_data in activities:
-                stmt = insert(Activity).values(**act_data)
-                stmt = stmt.on_duplicate_key_update(
-                    activity_name=act_data["activity_name"],
-                    distance_miles=act_data["distance_miles"],
-                    duration_seconds=act_data["duration_seconds"],
-                    calories=act_data["calories"],
-                )
-                await db.execute(stmt)
-            records_fetched += len(activities)
+            if not start_date:
+                start_date = date(2020, 1, 1)
+            if not end_date:
+                end_date = date.today()
 
-        if sync_type in (SyncType.steps, SyncType.full):
-            steps = garmin.get_steps(start_date, end_date)
-            for step_data in steps:
-                stmt = insert(DailySteps).values(**step_data)
-                stmt = stmt.on_duplicate_key_update(
-                    steps=step_data["steps"],
-                    goal=step_data["goal"],
-                    distance_miles=step_data["distance_miles"],
-                    floors_climbed=step_data["floors_climbed"],
-                )
-                await db.execute(stmt)
-            records_fetched += len(steps)
+            if sync_type in (SyncType.activities, SyncType.full):
+                activities = garmin.get_activities(start_date, end_date)
+                for act_data in activities:
+                    stmt = insert(Activity).values(**act_data)
+                    stmt = stmt.on_duplicate_key_update(
+                        activity_name=act_data["activity_name"],
+                        distance_miles=act_data["distance_miles"],
+                        duration_seconds=act_data["duration_seconds"],
+                        calories=act_data["calories"],
+                    )
+                    await db.execute(stmt)
+                records_fetched += len(activities)
+
+            if sync_type in (SyncType.steps, SyncType.full):
+                steps = garmin.get_steps(start_date, end_date)
+                for step_data in steps:
+                    stmt = insert(DailySteps).values(**step_data)
+                    stmt = stmt.on_duplicate_key_update(
+                        steps=step_data["steps"],
+                        goal=step_data["goal"],
+                        distance_miles=step_data["distance_miles"],
+                        floors_climbed=step_data["floors_climbed"],
+                    )
+                    await db.execute(stmt)
+                records_fetched += len(steps)
+
+            await db.commit()
+
+            # Update route progress for current year
+            await update_route_progress(db, date.today().year)
+
+            sync_log.status = SyncStatus.success
+            sync_log.records_fetched = records_fetched
+            sync_log.completed_at = datetime.utcnow()
+            logger.info(f"Sync {sync_log_id} completed: {records_fetched} records fetched")
+
+        except Exception as e:
+            logger.exception(f"Sync {sync_log_id} failed")
+            # Rollback before any further DB work to clear pending state
+            await db.rollback()
+            # Re-fetch sync_log after rollback
+            result = await db.execute(select(SyncLog).where(SyncLog.id == sync_log_id))
+            sync_log = result.scalar_one_or_none()
+            if sync_log:
+                sync_log.status = SyncStatus.failed
+                sync_log.error_message = str(e)
+                sync_log.completed_at = datetime.utcnow()
 
         await db.commit()
-
-        # Update route progress for current year
-        await update_route_progress(db, date.today().year)
-
-        sync_log.status = SyncStatus.success
-        sync_log.records_fetched = records_fetched
-        sync_log.completed_at = datetime.utcnow()
-
-    except Exception as e:
-        logger.error(f"Sync failed: {e}")
-        sync_log.status = SyncStatus.failed
-        sync_log.error_message = str(e)
-        sync_log.completed_at = datetime.utcnow()
-
-    await db.commit()
 
 
 async def update_route_progress(db: AsyncSession, year: int):
@@ -166,7 +180,7 @@ async def trigger_full_sync(
     await db.commit()
     await db.refresh(sync_log)
 
-    background_tasks.add_task(perform_sync, SyncType.full, db)
+    background_tasks.add_task(perform_sync, SyncType.full, sync_log.id)
     return SyncTriggerResponse(message="Full sync started", sync_id=sync_log.id)
 
 
@@ -181,7 +195,7 @@ async def trigger_activities_sync(
     await db.commit()
     await db.refresh(sync_log)
 
-    background_tasks.add_task(perform_sync, SyncType.activities, db)
+    background_tasks.add_task(perform_sync, SyncType.activities, sync_log.id)
     return SyncTriggerResponse(message="Activities sync started", sync_id=sync_log.id)
 
 
@@ -196,7 +210,7 @@ async def trigger_steps_sync(
     await db.commit()
     await db.refresh(sync_log)
 
-    background_tasks.add_task(perform_sync, SyncType.steps, db)
+    background_tasks.add_task(perform_sync, SyncType.steps, sync_log.id)
     return SyncTriggerResponse(message="Steps sync started", sync_id=sync_log.id)
 
 
