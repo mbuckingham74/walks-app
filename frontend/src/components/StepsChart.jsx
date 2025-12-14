@@ -52,23 +52,55 @@ export function StepsChart({ steps, isDark = false }) {
   };
 
   const chartData = useMemo(() => {
-    if (!steps || steps.length === 0) return [];
-
-    let filtered = steps;
-    if (range !== null) {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - range);
-      filtered = steps.filter(s => new Date(s.step_date) >= cutoff);
+    // Create a map of existing step data by date string
+    const stepsMap = new Map();
+    if (steps && steps.length > 0) {
+      steps.forEach(s => {
+        const dateKey = s.step_date; // YYYY-MM-DD format
+        stepsMap.set(dateKey, {
+          steps: s.steps ?? 0,
+          goal: s.goal ?? DAILY_GOAL,
+        });
+      });
     }
 
-    return filtered.map(s => ({
-      date: new Date(s.step_date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }),
-      steps: s.steps ?? 0,
-      goal: s.goal ?? DAILY_GOAL,
-    }));
+    // Determine date range
+    const today = new Date();
+    let startDate, endDate;
+
+    if (range === null) {
+      // "All" - show full year
+      startDate = new Date(today.getFullYear(), 0, 1); // Jan 1
+      endDate = new Date(today.getFullYear(), 11, 31); // Dec 31
+    } else if (range === 365) {
+      // "Year" - show full year
+      startDate = new Date(today.getFullYear(), 0, 1);
+      endDate = new Date(today.getFullYear(), 11, 31);
+    } else {
+      // Week or Month - show just that range from today backwards
+      endDate = new Date(today);
+      startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - range);
+    }
+
+    // Generate all dates in range
+    const result = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      const dateKey = current.toISOString().split('T')[0];
+      const data = stepsMap.get(dateKey);
+      result.push({
+        date: current.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        }),
+        steps: data?.steps ?? 0,
+        goal: data?.goal ?? DAILY_GOAL,
+      });
+      current.setDate(current.getDate() + 1);
+    }
+
+    return result;
   }, [steps, range]);
 
   const avgGoal = useMemo(() => {
