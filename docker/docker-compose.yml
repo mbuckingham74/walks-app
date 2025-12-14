@@ -47,7 +47,7 @@ services:
     container_name: walks-frontend
     restart: unless-stopped
     ports:
-      - "3080:80"
+      - "3080:8080"
     networks:
       - walks-network
       - npm_network
