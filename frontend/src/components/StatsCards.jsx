@@ -1,5 +1,12 @@
 import { MapPin, Footprints, Trophy, Navigation, TrendingUp, Flame, Target, Calendar } from 'lucide-react';
 
+// Parse ISO date string as local time (not UTC) to avoid timezone shift
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function StatsCards({ stats }) {
   if (!stats) return null;
 
@@ -31,7 +38,7 @@ export function StatsCards({ stats }) {
     {
       label: 'Best Day',
       value: stats.best_day_steps?.toLocaleString() || '0',
-      subtext: stats.best_day_date ? new Date(stats.best_day_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null,
+      subtext: stats.best_day_date ? parseLocalDate(stats.best_day_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null,
       icon: Trophy,
       color: 'bg-amber-500',
     },
@@ -50,7 +57,7 @@ export function StatsCards({ stats }) {
     },
     {
       label: 'ETA Boston',
-      value: stats.eta_date ? new Date(stats.eta_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
+      value: stats.eta_date ? parseLocalDate(stats.eta_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
       subtext: stats.days_to_boston ? `${stats.days_to_boston} days` : null,
       icon: Calendar,
       color: 'bg-rose-500',
