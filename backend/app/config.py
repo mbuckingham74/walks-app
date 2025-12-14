@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings
+from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
@@ -9,7 +10,7 @@ class Settings(BaseSettings):
     mysql_host: str
     mysql_port: int = 3306
     mysql_user: str
-    mysql_password: str
+    mysql_password: SecretStr
     mysql_database: str = "walks_tracker"
 
     # App
@@ -18,10 +19,19 @@ class Settings(BaseSettings):
     api_key: SecretStr = SecretStr("")  # Required for mutating endpoints
 
     @property
-    def database_url(self) -> str:
-        return (
-            f"mysql+aiomysql://{self.mysql_user}:{self.mysql_password}"
-            f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
+    def database_url(self) -> URL:
+        """Build database URL safely using URL.create.
+
+        This properly handles special characters in passwords and avoids
+        potential credential leakage in logs from f-string interpolation.
+        """
+        return URL.create(
+            drivername="mysql+aiomysql",
+            username=self.mysql_user,
+            password=self.mysql_password.get_secret_value(),
+            host=self.mysql_host,
+            port=self.mysql_port,
+            database=self.mysql_database,
         )
 
     @property
