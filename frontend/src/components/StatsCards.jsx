@@ -11,8 +11,8 @@ export function StatsCards({ stats }) {
       color: 'bg-primary-500',
     },
     {
-      label: 'Total Walks',
-      value: stats.total_walks.toLocaleString(),
+      label: 'Total Steps',
+      value: stats.total_steps?.toLocaleString() || '0',
       icon: Footprints,
       color: 'bg-accent-500',
     },

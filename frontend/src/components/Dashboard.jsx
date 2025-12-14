@@ -94,9 +94,9 @@ export function Dashboard() {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Walking sessions</span>
+                        <span className="text-gray-600">Days tracked</span>
                         <span className="font-medium text-gray-900">
-                          {stats.total_walks}
+                          {stats.total_days}
                         </span>
                       </div>
                       {stats.crossings_completed > 0 && (
