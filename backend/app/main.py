@@ -234,21 +234,101 @@ async def get_stats(
     if year is None:
         year = date.today().year
 
-    # Get total steps and days walked for the year
+    # Get total steps, days walked, avg, max for the year
     result = await db.execute(
         select(
             func.sum(DailySteps.steps),
-            func.count(DailySteps.id)
+            func.count(DailySteps.id),
+            func.avg(DailySteps.steps),
+            func.max(DailySteps.steps)
         ).where(extract("year", DailySteps.step_date) == year)
     )
     row = result.first()
     total_steps = int(row[0] or 0)
     total_days = row[1] or 0
+    avg_steps = int(row[2] or 0)
+    max_steps = int(row[3] or 0)
+
+    # Get best day date
+    best_day_result = await db.execute(
+        select(DailySteps.step_date)
+        .where(extract("year", DailySteps.step_date) == year)
+        .where(DailySteps.steps == max_steps)
+        .limit(1)
+    )
+    best_day_row = best_day_result.first()
+    best_day_date = best_day_row[0].isoformat() if best_day_row else None
+
+    # Get days goal met (goal >= 10000)
+    goal_met_result = await db.execute(
+        select(func.count(DailySteps.id))
+        .where(extract("year", DailySteps.step_date) == year)
+        .where(DailySteps.steps >= 10000)
+    )
+    days_goal_met = goal_met_result.scalar() or 0
+
+    # Calculate current streak (consecutive days meeting goal, ending today or yesterday)
+    all_steps_result = await db.execute(
+        select(DailySteps.step_date, DailySteps.steps)
+        .where(extract("year", DailySteps.step_date) == year)
+        .order_by(DailySteps.step_date.desc())
+    )
+    all_steps = all_steps_result.all()
+
+    current_streak = 0
+    today = date.today()
+    expected_date = today
+
+    for step_date, steps in all_steps:
+        # Allow streak to start from today or yesterday
+        if current_streak == 0 and step_date < today - timedelta(days=1):
+            break
+        if current_streak == 0 and step_date <= today:
+            expected_date = step_date
+
+        if step_date == expected_date and steps >= 10000:
+            current_streak += 1
+            expected_date = step_date - timedelta(days=1)
+        elif step_date == expected_date:
+            break  # Goal not met, streak ends
+        # Skip if date doesn't match (gap in data)
+
+    # This week vs last week comparison
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())  # Monday
+    last_week_start = week_start - timedelta(days=7)
+
+    this_week_result = await db.execute(
+        select(func.sum(DailySteps.steps))
+        .where(DailySteps.step_date >= week_start)
+        .where(DailySteps.step_date <= today)
+    )
+    this_week_steps = int(this_week_result.scalar() or 0)
+
+    last_week_result = await db.execute(
+        select(func.sum(DailySteps.steps))
+        .where(DailySteps.step_date >= last_week_start)
+        .where(DailySteps.step_date < week_start)
+    )
+    last_week_steps = int(last_week_result.scalar() or 0)
+
+    week_comparison = None
+    if last_week_steps > 0:
+        week_comparison = round(((this_week_steps - last_week_steps) / last_week_steps) * 100, 1)
 
     # Convert steps to miles (2000 steps = 1 mile)
     total_distance = total_steps / STEPS_PER_MILE
+    avg_daily_miles = avg_steps / STEPS_PER_MILE
 
     position = calculate_position(total_distance)
+
+    # Calculate ETA to Boston
+    miles_remaining = TOTAL_ROUTE_DISTANCE - position["effective_miles"]
+    days_to_boston = None
+    eta_date = None
+    if avg_daily_miles > 0 and miles_remaining > 0:
+        days_to_boston = int(miles_remaining / avg_daily_miles)
+        eta_date = (date.today() + timedelta(days=days_to_boston)).isoformat()
 
     return {
         "year": year,
@@ -256,6 +336,19 @@ async def get_stats(
         "total_steps": total_steps,
         "total_days": total_days,
         "crossings_completed": position["crossings_completed"],
+        # New stats
+        "avg_daily_steps": avg_steps,
+        "best_day_steps": max_steps,
+        "best_day_date": best_day_date,
+        "days_goal_met": days_goal_met,
+        "goal_met_percentage": round((days_goal_met / total_days * 100), 1) if total_days > 0 else 0,
+        "current_streak": current_streak,
+        "this_week_steps": this_week_steps,
+        "last_week_steps": last_week_steps,
+        "week_comparison": week_comparison,
+        "miles_remaining": round(miles_remaining, 1),
+        "days_to_boston": days_to_boston,
+        "eta_date": eta_date,
         "current_position": {
             "lat": position["lat"],
             "lon": position["lon"],

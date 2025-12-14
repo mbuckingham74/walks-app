@@ -7,7 +7,7 @@ import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
 import { SyncButton } from './SyncButton';
 import { ProgressCard } from './ProgressCard';
-import { Map, Activity, Sun, Moon } from 'lucide-react';
+import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export function Dashboard() {
   const { stats, loading: statsLoading, refetch: refetchStats } = useStats();
@@ -95,6 +95,59 @@ export function Dashboard() {
               <div className="space-y-6">
                 <ProgressCard currentPosition={stats?.current_position} />
 
+                {/* Week comparison */}
+                {stats && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-200">
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+                      This Week vs Last Week
+                    </h3>
+                    <div className="flex items-center gap-3 mb-3">
+                      {stats.week_comparison !== null ? (
+                        <>
+                          {stats.week_comparison > 0 ? (
+                            <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg">
+                              <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                          ) : stats.week_comparison < 0 ? (
+                            <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
+                              <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            </div>
+                          ) : (
+                            <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg">
+                              <Minus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            </div>
+                          )}
+                          <span className={`text-2xl font-semibold font-heading ${
+                            stats.week_comparison > 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : stats.week_comparison < 0
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {stats.week_comparison > 0 ? '+' : ''}{stats.week_comparison}%
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400">No data yet</span>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">This week</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {stats.this_week_steps?.toLocaleString() || 0} steps
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Last week</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {stats.last_week_steps?.toLocaleString() || 0} steps
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Year info */}
                 {stats && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-200">
@@ -103,9 +156,9 @@ export function Dashboard() {
                     </h3>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Distance walked</span>
+                        <span className="text-gray-600 dark:text-gray-400">Miles remaining</span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {stats.total_distance_miles.toLocaleString()} mi
+                          {stats.miles_remaining?.toLocaleString() || 0} mi
                         </span>
                       </div>
                       <div className="flex justify-between">

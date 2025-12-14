@@ -1,4 +1,4 @@
-import { MapPin, Footprints, Trophy, Navigation } from 'lucide-react';
+import { MapPin, Footprints, Trophy, Navigation, TrendingUp, Flame, Target, Calendar } from 'lucide-react';
 
 export function StatsCards({ stats }) {
   if (!stats) return null;
@@ -17,16 +17,43 @@ export function StatsCards({ stats }) {
       color: 'bg-accent-500',
     },
     {
-      label: 'Crossings Completed',
-      value: stats.crossings_completed,
+      label: 'Daily Average',
+      value: stats.avg_daily_steps?.toLocaleString() || '0',
+      icon: TrendingUp,
+      color: 'bg-violet-500',
+    },
+    {
+      label: 'Current Streak',
+      value: `${stats.current_streak || 0} days`,
+      icon: Flame,
+      color: 'bg-orange-500',
+    },
+    {
+      label: 'Best Day',
+      value: stats.best_day_steps?.toLocaleString() || '0',
+      subtext: stats.best_day_date ? new Date(stats.best_day_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null,
       icon: Trophy,
       color: 'bg-amber-500',
     },
     {
-      label: 'Progress',
-      value: `${stats.current_position.percent_complete.toFixed(1)}%`,
-      icon: Navigation,
+      label: 'Goals Met',
+      value: `${stats.days_goal_met || 0}`,
+      subtext: stats.goal_met_percentage ? `${stats.goal_met_percentage}%` : null,
+      icon: Target,
       color: 'bg-emerald-500',
+    },
+    {
+      label: 'Progress',
+      value: `${stats.current_position?.percent_complete?.toFixed(1) || 0}%`,
+      icon: Navigation,
+      color: 'bg-cyan-500',
+    },
+    {
+      label: 'ETA Boston',
+      value: stats.eta_date ? new Date(stats.eta_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
+      subtext: stats.days_to_boston ? `${stats.days_to_boston} days` : null,
+      icon: Calendar,
+      color: 'bg-rose-500',
     },
   ];
 
@@ -46,6 +73,9 @@ export function StatsCards({ stats }) {
           <p className="text-2xl font-semibold text-gray-900 dark:text-white font-heading">
             {card.value}
           </p>
+          {card.subtext && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{card.subtext}</p>
+          )}
         </div>
       ))}
     </div>
