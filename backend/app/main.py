@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
-from sqlalchemy import select, func, extract
+from sqlalchemy import select, func, extract, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 
@@ -242,22 +242,23 @@ async def get_steps(
     return result.scalars().all()
 
 
-@app.post("/api/steps", response_model=StepsResponse, dependencies=[Depends(verify_api_key)])
+@app.post("/api/steps", response_model=StepsResponse)
 async def upsert_steps(
     data: StepsInput,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Upsert daily steps from iOS Shortcut.
-    Insert if date doesn't exist, update if it does.
+    Insert if date doesn't exist, update only if new value is higher.
     """
     stmt = insert(DailySteps).values(
         step_date=data.date,
         steps=data.steps,
         goal=10000,
     )
+    # Only update if new value is higher than existing
     stmt = stmt.on_duplicate_key_update(
-        steps=data.steps,
+        steps=func.greatest(DailySteps.steps, stmt.inserted.steps),
     )
     await db.execute(stmt)
     await db.commit()
