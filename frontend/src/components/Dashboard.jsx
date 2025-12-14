@@ -12,7 +12,8 @@ import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight
 
 export function Dashboard() {
   const { stats, loading: statsLoading } = useStats();
-  const { steps, loading: stepsLoading } = useSteps();
+  // Fetch full year of steps for the chart
+  const { steps, loading: stepsLoading } = useSteps('2025-01-01', '2025-12-31');
   const { route, loading: routeLoading } = useRoute();
   const { isDark, toggle: toggleTheme } = useTheme();
 
