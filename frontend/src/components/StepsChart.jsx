@@ -12,7 +12,8 @@ import {
 
 const DATE_RANGES = [
   { label: 'Week', value: 7 },
-  { label: 'Month', value: 30 },
+  { label: 'Month', value: 'month' },
+  { label: 'Last 30', value: 30 },
   { label: 'Year', value: 365 },
   { label: 'All', value: null },
 ];
@@ -76,8 +77,12 @@ export function StepsChart({ steps, isDark = false }) {
       // "Year" - show full year
       startDate = new Date(today.getFullYear(), 0, 1);
       endDate = new Date(today.getFullYear(), 11, 31);
+    } else if (range === 'month') {
+      // "Month" - current calendar month (1st to last day)
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of month
     } else {
-      // Week or Month - show just that range from today backwards
+      // Week or Last 30 - show just that range from today backwards
       endDate = new Date(today);
       startDate = new Date(today);
       startDate.setDate(startDate.getDate() - range);
