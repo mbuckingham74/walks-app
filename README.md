@@ -1,4 +1,4 @@
-# Walks Tracker
+# Steps Tracker
 
 A personal dashboard to visualize walking progress as a virtual journey across the United States via I-90 from Seattle to Boston (2,850 miles).
 
