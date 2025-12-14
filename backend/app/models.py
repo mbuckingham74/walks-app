@@ -1,30 +1,17 @@
 from datetime import datetime, date
 from decimal import Decimal
-from enum import Enum as PyEnum
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Date, DateTime,
-    DECIMAL, Text, Enum, func
+    DECIMAL, func
 )
 from app.database import Base
-
-
-class SyncType(PyEnum):
-    activities = "activities"
-    steps = "steps"
-    full = "full"
-
-
-class SyncStatus(PyEnum):
-    running = "running"
-    success = "success"
-    failed = "failed"
 
 
 class Activity(Base):
     __tablename__ = "activities"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    garmin_activity_id = Column(BigInteger, unique=True, nullable=False)
+    external_activity_id = Column(BigInteger, unique=True, nullable=False)
     activity_date = Column(Date, nullable=False)
     activity_name = Column(String(255))
     distance_miles = Column(DECIMAL(10, 2), default=0)
@@ -49,18 +36,6 @@ class DailySteps(Base):
     distance_miles = Column(DECIMAL(10, 2))
     floors_climbed = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
-
-
-class SyncLog(Base):
-    __tablename__ = "sync_log"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    sync_type = Column(Enum(SyncType), nullable=False)
-    started_at = Column(DateTime, server_default=func.now())
-    completed_at = Column(DateTime)
-    status = Column(Enum(SyncStatus), default=SyncStatus.running)
-    records_fetched = Column(Integer, default=0)
-    error_message = Column(Text)
 
 
 class RouteProgress(Base):

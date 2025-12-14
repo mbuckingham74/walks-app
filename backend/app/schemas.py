@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from pydantic import BaseModel
 from typing import Optional
@@ -6,7 +6,7 @@ from typing import Optional
 
 class ActivitySchema(BaseModel):
     id: int
-    garmin_activity_id: int
+    external_activity_id: int
     activity_date: date
     activity_name: Optional[str]
     distance_miles: Decimal
@@ -29,18 +29,6 @@ class DailyStepsSchema(BaseModel):
     goal: int
     distance_miles: Optional[Decimal]
     floors_climbed: Optional[int]
-
-    class Config:
-        from_attributes = True
-
-
-class SyncStatusSchema(BaseModel):
-    sync_type: str
-    started_at: datetime
-    completed_at: Optional[datetime]
-    status: str
-    records_fetched: int
-    error_message: Optional[str]
 
     class Config:
         from_attributes = True
@@ -75,11 +63,6 @@ class StatsSchema(BaseModel):
     total_walks: int
     crossings_completed: int
     current_position: PositionSchema
-
-
-class SyncTriggerResponse(BaseModel):
-    message: str
-    sync_id: int
 
 
 class StepsInput(BaseModel):
