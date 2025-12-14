@@ -71,7 +71,7 @@ export function Dashboard() {
                     Route Progress
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {route?.total_distance.toLocaleString()} miles from Seattle to Boston
+                    {route?.total_distance?.toLocaleString() ?? '—'} miles from Seattle to Boston
                   </p>
                 </div>
                 <div className="h-[400px]">

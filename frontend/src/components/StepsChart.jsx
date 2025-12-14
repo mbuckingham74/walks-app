@@ -21,16 +21,18 @@ function CustomTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
-  const metGoal = data.steps >= data.goal;
+  const steps = data.steps ?? 0;
+  const goal = data.goal ?? 10000;
+  const metGoal = steps >= goal;
 
   return (
     <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700">
       <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
       <p className="text-lg font-semibold text-primary-600 dark:text-primary-400">
-        {data.steps.toLocaleString()} steps
+        {steps.toLocaleString()} steps
       </p>
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        Goal: {data.goal.toLocaleString()}
+        Goal: {goal.toLocaleString()}
         {metGoal && <span className="ml-1 text-primary-500 dark:text-primary-400">Met!</span>}
       </p>
     </div>
@@ -62,8 +64,8 @@ export function StepsChart({ steps, isDark = false }) {
         month: 'short',
         day: 'numeric',
       }),
-      steps: s.steps,
-      goal: s.goal,
+      steps: s.steps ?? 0,
+      goal: s.goal ?? 10000,
     }));
   }, [steps, range]);
 

@@ -14,11 +14,11 @@ export function ProgressCard({ currentPosition }) {
         <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-primary-500 rounded-full transition-all duration-500"
-            style={{ width: `${percent_complete}%` }}
+            style={{ width: `${Math.min(100, Math.max(0, percent_complete ?? 0))}%` }}
           />
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {percent_complete.toFixed(1)}% of the way across America
+          {percent_complete?.toFixed(1) ?? '0.0'}% of the way across America
         </p>
       </div>
 
@@ -42,7 +42,7 @@ export function ProgressCard({ currentPosition }) {
             <p className="text-sm text-gray-700 dark:text-gray-300">
               {next_waypoint.city}
               <span className="text-gray-400 dark:text-gray-500 ml-1">
-                ({miles_to_next.toFixed(0)} mi)
+                ({miles_to_next?.toFixed(0) ?? '—'} mi)
               </span>
             </p>
           </div>
