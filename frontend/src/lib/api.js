@@ -37,26 +37,27 @@ async function fetchAPI(endpoint, options = {}) {
 
 export const api = {
   // Stats
-  getStats: (year) => fetchAPI(year ? `/stats?year=${year}` : '/stats'),
+  getStats: (year, { signal } = {}) => fetchAPI(year ? `/stats?year=${year}` : '/stats', { signal }),
 
   // Steps
-  getSteps: (start, end) => {
+  getSteps: (start, end, { signal } = {}) => {
     const params = new URLSearchParams();
     if (start) params.append('start', start);
     if (end) params.append('end', end);
-    return fetchAPI(`/steps?${params}`);
+    return fetchAPI(`/steps?${params}`, { signal });
   },
 
   // Activities
-  getActivities: (year, limit = 50) => {
+  getActivities: (year, options = {}) => {
+    const { limit = 50, signal } = options;
     const params = new URLSearchParams();
     if (year) params.append('year', year);
     params.append('limit', limit);
-    return fetchAPI(`/activities?${params}`);
+    return fetchAPI(`/activities?${params}`, { signal });
   },
 
   // Route
-  getRoute: () => fetchAPI('/route'),
+  getRoute: ({ signal } = {}) => fetchAPI('/route', { signal }),
 
   // Sync
   triggerSync: () => fetchAPI('/sync', { method: 'POST' }),
