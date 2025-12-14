@@ -34,7 +34,7 @@ export function Dashboard() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white font-heading">
-                  Walks Tracker
+                  Steps Tracker
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Seattle to Boston via I-90</p>
               </div>
