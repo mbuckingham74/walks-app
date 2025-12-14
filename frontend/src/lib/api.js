@@ -1,19 +1,38 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function fetchAPI(endpoint, options = {}) {
+  const { headers, ...restOptions } = options;
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...headers,
     },
-    ...options,
+    ...restOptions,
   });
 
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
   }
 
-  return response.json();
+  // Handle 204 No Content
+  if (response.status === 204) {
+    return null;
+  }
+
+  // Use text() to safely handle empty bodies (Content-Length unreliable with CORS)
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  const contentType = response.headers.get('content-type');
+  // Accept application/json and application/*+json (e.g. application/problem+json)
+  if (contentType && /application\/(?:.*\+)?json/.test(contentType)) {
+    return JSON.parse(text);
+  }
+
+  // Non-JSON 2xx response is unexpected - throw rather than silently return null
+  throw new Error(`Unexpected content-type: ${contentType || 'none'}`);
 }
 
 export const api = {
