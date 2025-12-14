@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -223,6 +224,7 @@ async def get_sync_status(db: AsyncSession = Depends(get_db)):
 # --- Data Retrieval ---
 
 STEPS_PER_MILE = 2000
+EST = ZoneInfo("America/New_York")
 
 
 @app.get("/api/stats")
@@ -232,7 +234,7 @@ async def get_stats(
 ):
     """Get dashboard statistics based on daily steps. Defaults to current year if not specified."""
     if year is None:
-        year = date.today().year
+        year = datetime.now(EST).date().year
 
     # Get total steps, days walked, avg, max for the year
     result = await db.execute(
@@ -276,7 +278,8 @@ async def get_stats(
     all_steps = all_steps_result.all()
 
     current_streak = 0
-    today = date.today()
+    # Use EST timezone for "today" since Health data uses phone's local time
+    today = datetime.now(EST).date()
     expected_date = today
 
     for step_date, steps in all_steps:
@@ -293,8 +296,8 @@ async def get_stats(
             break  # Goal not met, streak ends
         # Skip if date doesn't match (gap in data)
 
-    # This week vs last week comparison
-    today = date.today()
+    # This week vs last week comparison (using EST)
+    today = datetime.now(EST).date()
     week_start = today - timedelta(days=today.weekday())  # Monday
     last_week_start = week_start - timedelta(days=7)
 
@@ -322,13 +325,13 @@ async def get_stats(
 
     position = calculate_position(total_distance)
 
-    # Calculate ETA to Boston
+    # Calculate ETA to Boston (using EST)
     miles_remaining = TOTAL_ROUTE_DISTANCE - position["effective_miles"]
     days_to_boston = None
     eta_date = None
     if avg_daily_miles > 0 and miles_remaining > 0:
         days_to_boston = int(miles_remaining / avg_daily_miles)
-        eta_date = (date.today() + timedelta(days=days_to_boston)).isoformat()
+        eta_date = (datetime.now(EST).date() + timedelta(days=days_to_boston)).isoformat()
 
     return {
         "year": year,
