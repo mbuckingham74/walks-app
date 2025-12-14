@@ -115,24 +115,21 @@ Run the shortcut daily (manually or via automation) to sync your steps.
 
 ## Route Waypoints
 
-The I-90 route includes major cities:
-- Seattle, WA (start)
-- Spokane, WA
-- Missoula, MT
-- Butte, MT
-- Billings, MT
-- Rapid City, SD
-- Sioux Falls, SD
-- Albert Lea, MN
-- Madison, WI
-- Chicago, IL
-- Toledo, OH
-- Cleveland, OH
-- Erie, PA
-- Buffalo, NY
-- Syracuse, NY
-- Albany, NY
-- Boston, MA (finish)
+The I-90 route includes 34 waypoints across 11 states:
+
+**Washington**: Seattle → Ellensburg → Spokane
+**Idaho**: Coeur d'Alene
+**Montana**: Missoula → Butte → Bozeman → Billings
+**Wyoming**: Sheridan → Gillette
+**South Dakota**: Rapid City → Wall → Chamberlain → Mitchell → Sioux Falls
+**Minnesota**: Worthington → Albert Lea → Rochester
+**Wisconsin**: La Crosse → Madison
+**Illinois**: Rockford → Chicago
+**Indiana**: Gary → South Bend
+**Ohio**: Toledo → Cleveland
+**Pennsylvania**: Erie
+**New York**: Buffalo → Rochester → Syracuse → Utica → Albany
+**Massachusetts**: Springfield → Boston
 
 ## Architecture
 
