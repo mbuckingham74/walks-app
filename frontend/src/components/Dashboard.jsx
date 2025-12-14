@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useStats } from '../hooks/useStats';
 import { useSteps } from '../hooks/useSteps';
 import { useRoute } from '../hooks/useRoute';
@@ -7,7 +8,7 @@ import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
 import { ProgressCard } from './ProgressCard';
 import { ROUTE_CONFIG } from '../config';
-import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 
 export function Dashboard() {
   const { stats, loading: statsLoading } = useStats();
@@ -168,6 +169,13 @@ export function Dashboard() {
                         </div>
                       )}
                     </div>
+                    <Link
+                      to="/2025"
+                      className="mt-4 flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
+                    >
+                      <span>View 2025 Details</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
                   </div>
                 )}
               </div>

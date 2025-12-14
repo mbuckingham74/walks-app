@@ -80,6 +80,7 @@ app.add_middleware(
 # --- Data Retrieval ---
 
 STEPS_PER_MILE = 2000
+DAILY_GOAL = 15000
 EST = ZoneInfo("America/New_York")
 
 
@@ -117,11 +118,11 @@ async def get_stats(
     best_day_row = best_day_result.first()
     best_day_date = best_day_row[0].isoformat() if best_day_row else None
 
-    # Get days goal met (goal >= 10000)
+    # Get days goal met (goal >= DAILY_GOAL)
     goal_met_result = await db.execute(
         select(func.count(DailySteps.id))
         .where(extract("year", DailySteps.step_date) == year)
-        .where(DailySteps.steps >= 10000)
+        .where(DailySteps.steps >= DAILY_GOAL)
     )
     days_goal_met = goal_met_result.scalar() or 0
 
@@ -145,7 +146,7 @@ async def get_stats(
         if current_streak == 0 and step_date <= today:
             expected_date = step_date
 
-        if step_date == expected_date and steps >= 10000:
+        if step_date == expected_date and steps >= DAILY_GOAL:
             current_streak += 1
             expected_date = step_date - timedelta(days=1)
         elif step_date == expected_date:
@@ -254,7 +255,7 @@ async def upsert_steps(
     stmt = insert(DailySteps).values(
         step_date=data.date,
         steps=data.steps,
-        goal=10000,
+        goal=DAILY_GOAL,
     )
     # Only update if new value is higher than existing
     stmt = stmt.on_duplicate_key_update(

@@ -8,8 +8,9 @@ A personal dashboard to visualize steps and walking progress as a virtual journe
 
 - **Virtual Cross-Country Journey**: Track your real-world steps as progress along I-90
 - **Interactive Map**: Leaflet-powered map showing your current position and route waypoints
-- **Daily Steps Chart**: Visualize step counts with goal tracking and date range filters
+- **Daily Steps Chart**: Visualize step counts with goal tracking (15,000 steps/day) and date range filters
 - **Statistics Dashboard**: Total distance, steps, days tracked, and crossing count
+- **Yearly Detail View**: Browse daily step data in a sortable table
 - **Dark Mode**: System-aware theme with manual toggle
 - **iOS Shortcut Integration**: Push daily steps from Apple Health via iOS Shortcuts
 
@@ -30,7 +31,7 @@ A personal dashboard to visualize steps and walking progress as a virtual journe
 Apple Health → iOS Shortcut → POST /api/steps → MySQL → Dashboard
 ```
 
-Steps are converted to miles at a rate of **2,000 steps = 1 mile**.
+Steps are converted to miles at a rate of **2,000 steps = 1 mile**. Daily goal is **15,000 steps**.
 
 ## Setup
 

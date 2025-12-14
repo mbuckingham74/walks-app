@@ -17,12 +17,14 @@ const DATE_RANGES = [
   { label: 'All', value: null },
 ];
 
+const DAILY_GOAL = 15000;
+
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
   const steps = data.steps ?? 0;
-  const goal = data.goal ?? 10000;
+  const goal = data.goal ?? DAILY_GOAL;
   const metGoal = steps >= goal;
 
   return (
@@ -65,12 +67,12 @@ export function StepsChart({ steps, isDark = false }) {
         day: 'numeric',
       }),
       steps: s.steps ?? 0,
-      goal: s.goal ?? 10000,
+      goal: s.goal ?? DAILY_GOAL,
     }));
   }, [steps, range]);
 
   const avgGoal = useMemo(() => {
-    if (chartData.length === 0) return 10000;
+    if (chartData.length === 0) return DAILY_GOAL;
     const sum = chartData.reduce((acc, d) => acc + d.goal, 0);
     return Math.round(sum / chartData.length);
   }, [chartData]);
