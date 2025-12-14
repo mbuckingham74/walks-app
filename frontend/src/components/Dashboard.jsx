@@ -5,20 +5,14 @@ import { useTheme } from '../hooks/useTheme';
 import { StatsCards } from './StatsCards';
 import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
-import { SyncButton } from './SyncButton';
 import { ProgressCard } from './ProgressCard';
 import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export function Dashboard() {
-  const { stats, loading: statsLoading, refetch: refetchStats } = useStats();
-  const { steps, loading: stepsLoading, refetch: refetchSteps } = useSteps();
+  const { stats, loading: statsLoading } = useStats();
+  const { steps, loading: stepsLoading } = useSteps();
   const { route, loading: routeLoading } = useRoute();
   const { isDark, toggle: toggleTheme } = useTheme();
-
-  const handleSyncComplete = () => {
-    refetchStats();
-    refetchSteps();
-  };
 
   const isLoading = statsLoading || stepsLoading || routeLoading;
 
@@ -39,20 +33,17 @@ export function Dashboard() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Seattle to Boston via I-90</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 cursor-pointer"
-                aria-label="Toggle dark mode"
-              >
-                {isDark ? (
-                  <Sun className="w-5 h-5 text-amber-500" />
-                ) : (
-                  <Moon className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              <SyncButton onSyncComplete={handleSyncComplete} />
-            </div>
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 cursor-pointer"
+              aria-label="Toggle dark mode"
+            >
+              {isDark ? (
+                <Sun className="w-5 h-5 text-amber-500" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
           </div>
         </div>
       </header>
