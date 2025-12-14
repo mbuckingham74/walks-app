@@ -26,7 +26,10 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        if "*" in origins:
+            raise ValueError("CORS_ORIGINS cannot contain '*' when allow_credentials=True.")
+        return origins
 
     class Config:
         env_file = ".env"
