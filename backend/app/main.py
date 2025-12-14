@@ -119,30 +119,33 @@ async def perform_sync(
 
 
 async def update_route_progress(db: AsyncSession, year: int):
-    """Recalculate route progress for a given year."""
+    """Recalculate route progress for a given year based on daily steps."""
     result = await db.execute(
         select(
-            func.sum(Activity.distance_miles),
-            func.count(Activity.id)
-        ).where(extract("year", Activity.activity_date) == year)
+            func.sum(DailySteps.steps),
+            func.count(DailySteps.id)
+        ).where(extract("year", DailySteps.step_date) == year)
     )
     row = result.first()
-    total_distance = float(row[0] or 0)
-    total_walks = row[1] or 0
+    total_steps = int(row[0] or 0)
+    total_days = row[1] or 0
+
+    # Convert steps to miles (2000 steps = 1 mile)
+    total_distance = total_steps / 2000
 
     position = calculate_position(total_distance)
 
     stmt = insert(RouteProgress).values(
         year=year,
         total_distance_miles=total_distance,
-        total_walks=total_walks,
+        total_walks=total_days,
         current_waypoint_index=position["current_waypoint"]["index"],
         current_lat=position["lat"],
         current_lon=position["lon"],
     )
     stmt = stmt.on_duplicate_key_update(
         total_distance_miles=total_distance,
-        total_walks=total_walks,
+        total_walks=total_days,
         current_waypoint_index=position["current_waypoint"]["index"],
         current_lat=position["lat"],
         current_lon=position["lon"],
@@ -219,32 +222,39 @@ async def get_sync_status(db: AsyncSession = Depends(get_db)):
 
 # --- Data Retrieval ---
 
+STEPS_PER_MILE = 2000
+
+
 @app.get("/api/stats")
 async def get_stats(
     year: Optional[int] = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get dashboard statistics. Defaults to current year if not specified."""
+    """Get dashboard statistics based on daily steps. Defaults to current year if not specified."""
     if year is None:
         year = date.today().year
 
-    # Get totals for the year
+    # Get total steps and days walked for the year
     result = await db.execute(
         select(
-            func.sum(Activity.distance_miles),
-            func.count(Activity.id)
-        ).where(extract("year", Activity.activity_date) == year)
+            func.sum(DailySteps.steps),
+            func.count(DailySteps.id)
+        ).where(extract("year", DailySteps.step_date) == year)
     )
     row = result.first()
-    total_distance = float(row[0] or 0)
-    total_walks = row[1] or 0
+    total_steps = int(row[0] or 0)
+    total_days = row[1] or 0
+
+    # Convert steps to miles (2000 steps = 1 mile)
+    total_distance = total_steps / STEPS_PER_MILE
 
     position = calculate_position(total_distance)
 
     return {
         "year": year,
         "total_distance_miles": round(total_distance, 2),
-        "total_walks": total_walks,
+        "total_steps": total_steps,
+        "total_days": total_days,
         "crossings_completed": position["crossings_completed"],
         "current_position": {
             "lat": position["lat"],
