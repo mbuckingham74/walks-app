@@ -15,7 +15,8 @@ from app.database import get_db, init_db
 from app.models import Activity, DailySteps, SyncLog, RouteProgress, SyncType, SyncStatus
 from app.schemas import (
     ActivitySchema, DailyStepsSchema, SyncStatusSchema,
-    RouteSchema, WaypointSchema, StatsSchema, PositionSchema, SyncTriggerResponse
+    RouteSchema, WaypointSchema, StatsSchema, PositionSchema, SyncTriggerResponse,
+    StepsInput, StepsResponse
 )
 from app.route import get_route_waypoints, calculate_position, TOTAL_ROUTE_DISTANCE
 from app.garmin import get_garmin_client
@@ -277,6 +278,35 @@ async def get_steps(
         .order_by(DailySteps.step_date)
     )
     return result.scalars().all()
+
+
+@app.post("/api/steps", response_model=StepsResponse)
+async def upsert_steps(
+    data: StepsInput,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Upsert daily steps from iOS Shortcut.
+    Insert if date doesn't exist, update if it does.
+    """
+    stmt = insert(DailySteps).values(
+        step_date=data.date,
+        steps=data.steps,
+        goal=10000,
+    )
+    stmt = stmt.on_duplicate_key_update(
+        steps=data.steps,
+    )
+    await db.execute(stmt)
+    await db.commit()
+
+    logger.info(f"Upserted steps: {data.date} -> {data.steps}")
+
+    return StepsResponse(
+        status="ok",
+        date=data.date,
+        steps=data.steps
+    )
 
 
 @app.get("/api/activities", response_model=list[ActivitySchema])

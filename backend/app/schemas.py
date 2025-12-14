@@ -80,3 +80,14 @@ class StatsSchema(BaseModel):
 class SyncTriggerResponse(BaseModel):
     message: str
     sync_id: int
+
+
+class StepsInput(BaseModel):
+    date: date
+    steps: int
+
+
+class StepsResponse(BaseModel):
+    status: str
+    date: date
+    steps: int
