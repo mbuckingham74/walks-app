@@ -4,10 +4,6 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Garmin Connect
-    garmin_email: str
-    garmin_password: str
-
     # MySQL
     mysql_host: str
     mysql_port: int = 3306

@@ -4,10 +4,10 @@
 CREATE DATABASE IF NOT EXISTS walks_tracker;
 USE walks_tracker;
 
--- Activities table: Individual walking activities from Garmin
+-- Activities table: Individual walking activities
 CREATE TABLE IF NOT EXISTS activities (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    garmin_activity_id BIGINT UNIQUE NOT NULL,
+    external_activity_id BIGINT UNIQUE NOT NULL,
     activity_date DATE NOT NULL,
     activity_name VARCHAR(255),
     distance_miles DECIMAL(10, 2) DEFAULT 0,
@@ -34,19 +34,6 @@ CREATE TABLE IF NOT EXISTS daily_steps (
     floors_climbed INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_step_date (step_date)
-);
-
--- Sync log table: Track sync operations
-CREATE TABLE IF NOT EXISTS sync_log (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    sync_type ENUM('activities', 'steps', 'full') NOT NULL,
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP NULL,
-    status ENUM('running', 'success', 'failed') DEFAULT 'running',
-    records_fetched INT DEFAULT 0,
-    error_message TEXT,
-    INDEX idx_sync_status (status),
-    INDEX idx_sync_started (started_at)
 );
 
 -- Route progress table: Cached progress calculation
