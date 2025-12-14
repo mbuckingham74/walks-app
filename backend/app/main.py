@@ -1,4 +1,5 @@
 import logging
+import secrets
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -7,11 +8,12 @@ from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from sqlalchemy import select, func, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 
-from app.config import get_settings
+from app.config import get_settings, Settings
 from app.database import get_db, init_db
 from app.models import Activity, DailySteps, RouteProgress
 from app.schemas import (
@@ -25,6 +27,32 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
+# Security scheme for OpenAPI docs (shows "Authorize" button)
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def verify_api_key(
+    x_api_key: Optional[str] = Depends(api_key_header),
+    settings: Settings = Depends(get_settings),
+):
+    """Dependency to verify API key for mutating endpoints."""
+    configured_key = settings.api_key.get_secret_value().strip()
+    if not configured_key:
+        raise HTTPException(
+            status_code=500,
+            detail="API key not configured on server"
+        )
+    if not x_api_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing X-API-Key header"
+        )
+    if not secrets.compare_digest(x_api_key.strip(), configured_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key"
+        )
 
 
 @asynccontextmanager
@@ -214,7 +242,7 @@ async def get_steps(
     return result.scalars().all()
 
 
-@app.post("/api/steps", response_model=StepsResponse)
+@app.post("/api/steps", response_model=StepsResponse, dependencies=[Depends(verify_api_key)])
 async def upsert_steps(
     data: StepsInput,
     db: AsyncSession = Depends(get_db)
