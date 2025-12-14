@@ -52,6 +52,7 @@ services:
       - "3080:80"
     networks:
       - walks-network
+      - npm_network
     depends_on:
       - walks-api
 
@@ -62,3 +63,5 @@ volumes:
 networks:
   walks-network:
     driver: bridge
+  npm_network:
+    external: true
