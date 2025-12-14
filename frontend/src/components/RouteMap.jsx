@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { ROUTE_CONFIG } from '../config';
 
 // Custom marker icons
 const createIcon = (color, size = 12) => L.divIcon({
@@ -90,12 +91,10 @@ export function RouteMap({ route, currentPosition }) {
     );
   }
 
-  const center = [42.5, -96]; // Center of US
-
   return (
     <MapContainer
-      center={center}
-      zoom={4}
+      center={ROUTE_CONFIG.mapCenter}
+      zoom={ROUTE_CONFIG.mapZoom}
       scrollWheelZoom={true}
       className="h-full w-full rounded-xl"
     >
@@ -138,7 +137,7 @@ export function RouteMap({ route, currentPosition }) {
             <Popup>
               <div className="text-sm">
                 <p className="font-semibold">{wp.city}</p>
-                <p className="text-gray-600">{wp.miles_from_start} miles from Seattle</p>
+                <p className="text-gray-600">{wp.miles_from_start} miles from {ROUTE_CONFIG.startCity}</p>
               </div>
             </Popup>
           </Marker>

@@ -6,6 +6,7 @@ import { StatsCards } from './StatsCards';
 import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
 import { ProgressCard } from './ProgressCard';
+import { ROUTE_CONFIG } from '../config';
 import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export function Dashboard() {
@@ -30,7 +31,7 @@ export function Dashboard() {
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white font-heading">
                   Steps Tracker
                 </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Seattle to Boston via I-90</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{ROUTE_CONFIG.name}</p>
               </div>
             </div>
             <button
@@ -71,7 +72,7 @@ export function Dashboard() {
                     Route Progress
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {route?.total_distance?.toLocaleString() ?? '—'} miles from Seattle to Boston
+                    {route?.total_distance?.toLocaleString() ?? '—'} miles from {ROUTE_CONFIG.startCity} to {ROUTE_CONFIG.endCity}
                   </p>
                 </div>
                 <div className="h-[400px]">
