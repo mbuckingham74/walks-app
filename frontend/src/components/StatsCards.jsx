@@ -35,15 +35,15 @@ export function StatsCards({ stats }) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 cursor-default"
+          className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-default"
         >
           <div className="flex items-center gap-3 mb-3">
             <div className={`${card.color} p-2 rounded-lg`}>
               <card.icon className="w-5 h-5 text-white" />
             </div>
-            <span className="text-sm font-medium text-gray-500">{card.label}</span>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</span>
           </div>
-          <p className="text-2xl font-semibold text-gray-900 font-heading">
+          <p className="text-2xl font-semibold text-gray-900 dark:text-white font-heading">
             {card.value}
           </p>
         </div>

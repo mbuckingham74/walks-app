@@ -24,21 +24,28 @@ function CustomTooltip({ active, payload, label }) {
   const metGoal = data.steps >= data.goal;
 
   return (
-    <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-100">
-      <p className="text-sm font-medium text-gray-900">{label}</p>
-      <p className="text-lg font-semibold text-primary-600">
+    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700">
+      <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+      <p className="text-lg font-semibold text-primary-600 dark:text-primary-400">
         {data.steps.toLocaleString()} steps
       </p>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-gray-400">
         Goal: {data.goal.toLocaleString()}
-        {metGoal && <span className="ml-1 text-primary-500">Met!</span>}
+        {metGoal && <span className="ml-1 text-primary-500 dark:text-primary-400">Met!</span>}
       </p>
     </div>
   );
 }
 
-export function StepsChart({ steps }) {
+export function StepsChart({ steps, isDark = false }) {
   const [range, setRange] = useState(30);
+
+  // Theme-aware colors for Recharts
+  const chartColors = {
+    grid: isDark ? '#374151' : '#e5e7eb',
+    axis: isDark ? '#9ca3af' : '#6b7280',
+    reference: isDark ? '#6b7280' : '#9ca3af',
+  };
 
   const chartData = useMemo(() => {
     if (!steps || steps.length === 0) return [];
@@ -69,7 +76,7 @@ export function StepsChart({ steps }) {
   if (!steps || steps.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-gray-500">No step data available</p>
+        <p className="text-gray-500 dark:text-gray-400">No step data available</p>
       </div>
     );
   }
@@ -85,7 +92,7 @@ export function StepsChart({ steps }) {
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer ${
               range === value
                 ? 'bg-primary-500 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             {label}
@@ -103,15 +110,15 @@ export function StepsChart({ steps }) {
                 <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, fill: '#6b7280' }}
+              tick={{ fontSize: 12, fill: chartColors.axis }}
               tickLine={false}
-              axisLine={{ stroke: '#e5e7eb' }}
+              axisLine={{ stroke: chartColors.grid }}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: '#6b7280' }}
+              tick={{ fontSize: 12, fill: chartColors.axis }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
@@ -119,12 +126,12 @@ export function StepsChart({ steps }) {
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine
               y={avgGoal}
-              stroke="#9ca3af"
+              stroke={chartColors.reference}
               strokeDasharray="5 5"
               label={{
                 value: 'Goal',
                 position: 'right',
-                fill: '#9ca3af',
+                fill: chartColors.reference,
                 fontSize: 12,
               }}
             />

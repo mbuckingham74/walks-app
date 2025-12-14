@@ -37,11 +37,11 @@ export function SyncButton({ onSyncComplete }) {
         flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
         transition-all duration-200 cursor-pointer
         ${syncing
-          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
           : status === 'success'
-          ? 'bg-primary-100 text-primary-700'
+          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
           : status === 'error'
-          ? 'bg-red-100 text-red-700'
+          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
           : 'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700'
         }
       `}
