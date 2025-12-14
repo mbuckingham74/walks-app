@@ -1,5 +1,6 @@
-import os
 from functools import lru_cache
+
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -14,6 +15,7 @@ class Settings(BaseSettings):
     # App
     debug: bool = False
     cors_origins: str = "http://localhost:5173"
+    api_key: SecretStr = SecretStr("")  # Required for mutating endpoints
 
     @property
     def database_url(self) -> str:
