@@ -1,3 +1,5 @@
+import hashlib
+import json
 import logging
 import secrets
 from contextlib import asynccontextmanager
@@ -15,7 +17,7 @@ from sqlalchemy.dialects.mysql import insert
 
 from app.config import get_settings, Settings
 from app.database import get_db, init_db
-from app.models import Activity, DailySteps, RouteProgress
+from app.models import Activity, DailySteps, RouteProgress, StatsCache
 from app.schemas import (
     ActivitySchema, DailyStepsSchema,
     RouteSchema, WaypointSchema, StatsSchema, PositionSchema,
@@ -82,94 +84,131 @@ app.add_middleware(
 EST = ZoneInfo("America/New_York")
 
 
-@app.get("/api/stats")
-async def get_stats(
-    year: Optional[int] = Query(default=None),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get dashboard statistics based on daily steps. Defaults to current year if not specified."""
-    if year is None:
-        year = datetime.now(EST).date().year
+async def _compute_data_hash(db: AsyncSession, year: int, today: date) -> str:
+    """Compute a hash of the underlying data to detect changes.
 
-    # Get total steps, days walked, avg, max for the year
+    Includes: max step_date, total steps, record count, and today's date
+    (today matters because streak/week calculations are date-relative).
+    """
     result = await db.execute(
         select(
+            func.max(DailySteps.step_date),
             func.sum(DailySteps.steps),
-            func.count(DailySteps.id),
-            func.avg(DailySteps.steps),
-            func.max(DailySteps.steps)
+            func.count(DailySteps.id)
         ).where(extract("year", DailySteps.step_date) == year)
     )
     row = result.first()
-    total_steps = int(row[0] or 0)
-    total_days = row[1] or 0
-    avg_steps = int(row[2] or 0)
-    max_steps = int(row[3] or 0)
+    hash_input = f"{row[0]}|{row[1]}|{row[2]}|{today.isoformat()}"
+    return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
-    # Get best day date
-    best_day_result = await db.execute(
-        select(DailySteps.step_date)
-        .where(extract("year", DailySteps.step_date) == year)
-        .where(DailySteps.steps == max_steps)
-        .limit(1)
+
+async def _calculate_streak_sql(db: AsyncSession, year: int, today: date, daily_goal: int) -> int:
+    """Calculate current streak using MySQL window functions.
+
+    Uses LAG to detect gaps in consecutive goal-met days, then finds
+    the streak that includes today or yesterday.
+    """
+    yesterday = today - timedelta(days=1)
+
+    # This query:
+    # 1. Filters to days where goal was met
+    # 2. Uses LAG to get previous goal-met date
+    # 3. Calculates if there's a gap (more than 1 day between consecutive goal-met days)
+    # 4. Creates streak groups using a running sum of gap flags
+    # 5. Finds the streak containing today or yesterday and counts its days
+    streak_sql = text("""
+        WITH goal_met_days AS (
+            SELECT
+                step_date,
+                LAG(step_date) OVER (ORDER BY step_date) as prev_date
+            FROM daily_steps
+            WHERE YEAR(step_date) = :year
+              AND steps >= :daily_goal
+        ),
+        with_gaps AS (
+            SELECT
+                step_date,
+                CASE
+                    WHEN prev_date IS NULL THEN 1
+                    WHEN DATEDIFF(step_date, prev_date) > 1 THEN 1
+                    ELSE 0
+                END as is_new_streak
+            FROM goal_met_days
+        ),
+        with_groups AS (
+            SELECT
+                step_date,
+                SUM(is_new_streak) OVER (ORDER BY step_date) as streak_group
+            FROM with_gaps
+        ),
+        current_streak AS (
+            SELECT streak_group, COUNT(*) as streak_length, MAX(step_date) as max_date
+            FROM with_groups
+            GROUP BY streak_group
+            HAVING MAX(step_date) >= :yesterday
+        )
+        SELECT COALESCE(MAX(streak_length), 0) as current_streak
+        FROM current_streak
+        WHERE max_date >= :yesterday
+    """)
+
+    result = await db.execute(
+        streak_sql,
+        {"year": year, "daily_goal": daily_goal, "yesterday": yesterday}
     )
-    best_day_row = best_day_result.first()
-    best_day_date = best_day_row[0].isoformat() if best_day_row else None
+    return result.scalar() or 0
 
-    # Get days goal met (goal >= daily_goal)
-    goal_met_result = await db.execute(
-        select(func.count(DailySteps.id))
-        .where(extract("year", DailySteps.step_date) == year)
-        .where(DailySteps.steps >= settings.daily_goal)
-    )
-    days_goal_met = goal_met_result.scalar() or 0
 
-    # Calculate current streak (consecutive days meeting goal, ending today or yesterday)
-    all_steps_result = await db.execute(
-        select(DailySteps.step_date, DailySteps.steps)
-        .where(extract("year", DailySteps.step_date) == year)
-        .order_by(DailySteps.step_date.desc())
-    )
-    all_steps = all_steps_result.all()
-
-    current_streak = 0
-    # Use EST timezone for "today" since Health data uses phone's local time
-    today = datetime.now(EST).date()
-    expected_date = today
-
-    for step_date, steps in all_steps:
-        # Allow streak to start from today or yesterday
-        if current_streak == 0 and step_date < today - timedelta(days=1):
-            break
-        if current_streak == 0 and step_date <= today:
-            expected_date = step_date
-
-        if step_date == expected_date and steps >= settings.daily_goal:
-            current_streak += 1
-            expected_date = step_date - timedelta(days=1)
-        elif step_date == expected_date:
-            break  # Goal not met, streak ends
-        # Skip if date doesn't match (gap in data)
-
-    # This week vs last week comparison (using EST)
+async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dict:
+    """Compute all statistics in optimized queries."""
     today = datetime.now(EST).date()
     week_start = today - timedelta(days=today.weekday())  # Monday
     last_week_start = week_start - timedelta(days=7)
 
-    this_week_result = await db.execute(
-        select(func.sum(DailySteps.steps))
-        .where(DailySteps.step_date >= week_start)
-        .where(DailySteps.step_date <= today)
-    )
-    this_week_steps = int(this_week_result.scalar() or 0)
+    # Single query for all aggregates + best day + goal met + weekly comparisons
+    combined_sql = text("""
+        SELECT
+            COALESCE(SUM(steps), 0) as total_steps,
+            COUNT(*) as total_days,
+            COALESCE(AVG(steps), 0) as avg_steps,
+            COALESCE(MAX(steps), 0) as max_steps,
+            (SELECT step_date FROM daily_steps
+             WHERE YEAR(step_date) = :year
+             ORDER BY steps DESC, step_date ASC LIMIT 1) as best_day_date,
+            SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END) as days_goal_met,
+            COALESCE(SUM(CASE WHEN step_date >= :week_start AND step_date <= :today
+                         THEN steps ELSE 0 END), 0) as this_week_steps,
+            COALESCE(SUM(CASE WHEN step_date >= :last_week_start AND step_date < :week_start
+                         THEN steps ELSE 0 END), 0) as last_week_steps
+        FROM daily_steps
+        WHERE YEAR(step_date) = :year
+    """)
 
-    last_week_result = await db.execute(
-        select(func.sum(DailySteps.steps))
-        .where(DailySteps.step_date >= last_week_start)
-        .where(DailySteps.step_date < week_start)
+    result = await db.execute(
+        combined_sql,
+        {
+            "year": year,
+            "daily_goal": settings.daily_goal,
+            "week_start": week_start,
+            "last_week_start": last_week_start,
+            "today": today
+        }
     )
-    last_week_steps = int(last_week_result.scalar() or 0)
+    row = result.first()
 
+    total_steps = int(row[0])
+    total_days = int(row[1])
+    avg_steps = int(row[2])
+    max_steps = int(row[3])
+    best_day_date = row[4].isoformat() if row[4] else None
+    days_goal_met = int(row[5])
+    this_week_steps = int(row[6])
+    last_week_steps = int(row[7])
+
+    # Calculate streak using window function query
+    current_streak = await _calculate_streak_sql(db, year, today, settings.daily_goal)
+
+    # Week comparison
     week_comparison = None
     if last_week_steps > 0:
         week_comparison = round(((this_week_steps - last_week_steps) / last_week_steps) * 100, 1)
@@ -180,13 +219,13 @@ async def get_stats(
 
     position = calculate_position(total_distance)
 
-    # Calculate ETA to Boston (using EST)
+    # Calculate ETA to Boston
     miles_remaining = TOTAL_ROUTE_DISTANCE - position["effective_miles"]
     days_to_boston = None
     eta_date = None
     if avg_daily_miles > 0 and miles_remaining > 0:
         days_to_boston = int(miles_remaining / avg_daily_miles)
-        eta_date = (datetime.now(EST).date() + timedelta(days=days_to_boston)).isoformat()
+        eta_date = (today + timedelta(days=days_to_boston)).isoformat()
 
     return {
         "year": year,
@@ -194,7 +233,6 @@ async def get_stats(
         "total_steps": total_steps,
         "total_days": total_days,
         "crossings_completed": position["crossings_completed"],
-        # New stats
         "avg_daily_steps": avg_steps,
         "best_day_steps": max_steps,
         "best_day_date": best_day_date,
@@ -218,6 +256,54 @@ async def get_stats(
             "percent_complete": round(position["percent_complete"], 1),
         }
     }
+
+
+@app.get("/api/stats")
+async def get_stats(
+    year: Optional[int] = Query(default=None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get dashboard statistics based on daily steps.
+
+    Uses caching - stats are recomputed only when underlying data changes.
+    Defaults to current year if not specified.
+    """
+    if year is None:
+        year = datetime.now(EST).date().year
+
+    today = datetime.now(EST).date()
+
+    # Check cache
+    current_hash = await _compute_data_hash(db, year, today)
+
+    cache_result = await db.execute(
+        select(StatsCache).where(StatsCache.year == year)
+    )
+    cached = cache_result.scalar_one_or_none()
+
+    if cached and cached.data_hash == current_hash:
+        logger.debug(f"Stats cache hit for year {year}")
+        return json.loads(cached.stats_json)
+
+    # Cache miss or stale - recompute
+    logger.info(f"Stats cache miss for year {year}, recomputing...")
+    stats = await _compute_stats(db, year, settings)
+
+    # Update cache
+    stats_json = json.dumps(stats)
+    stmt = insert(StatsCache).values(
+        year=year,
+        stats_json=stats_json,
+        data_hash=current_hash
+    )
+    stmt = stmt.on_duplicate_key_update(
+        stats_json=stats_json,
+        data_hash=current_hash
+    )
+    await db.execute(stmt)
+    await db.commit()
+
+    return stats
 
 
 @app.get("/api/steps", response_model=list[DailyStepsSchema])

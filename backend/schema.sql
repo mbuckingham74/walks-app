@@ -48,3 +48,14 @@ CREATE TABLE IF NOT EXISTS route_progress (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_progress_year (year)
 );
+
+-- Stats cache table: Full stats response caching with data-based invalidation
+CREATE TABLE IF NOT EXISTS stats_cache (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    year INT UNIQUE NOT NULL,
+    stats_json VARCHAR(4000) NOT NULL,
+    data_hash VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_stats_year (year)
+);
