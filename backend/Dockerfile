@@ -10,8 +10,8 @@ RUN groupadd --gid 1000 appgroup && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY app/ ./app/
+# Copy application code and set ownership
+COPY --chown=appuser:appgroup app/ ./app/
 
 # Switch to non-root user
 USER appuser
