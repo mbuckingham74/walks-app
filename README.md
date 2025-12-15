@@ -93,6 +93,7 @@ See `.env.example` for a complete template.
 | `GET` | `/api/stats` | Dashboard statistics for a year |
 | `GET` | `/api/steps` | Daily steps data with date range |
 | `GET` | `/api/route` | I-90 waypoints for map rendering |
+| `GET` | `/api/config` | Public configuration (steps_per_mile, daily_goal) |
 | `GET` | `/api/health` | Health check |
 
 ### iOS Shortcut Integration
@@ -104,6 +105,7 @@ Create an iOS Shortcut that:
 ```
 POST https://your-domain.com/api/steps
 Content-Type: application/json
+X-API-Key: your_api_key_here
 
 {
   "date": "2025-12-13",

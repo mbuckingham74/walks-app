@@ -4,23 +4,25 @@ import { api } from '../lib/api';
 import { useTheme } from '../hooks/useTheme';
 import { ArrowLeft, Sun, Moon, Activity, Calendar, Footprints, MapPin } from 'lucide-react';
 
-const STEPS_PER_MILE = 2000;
-const DAILY_GOAL = 15000;
-
 export function StepsDetail2025() {
   const [steps, setSteps] = useState([]);
+  const [config, setConfig] = useState({ steps_per_mile: 2000, daily_goal: 15000 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { isDark, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
-    async function fetchSteps() {
+    async function fetchData() {
       try {
         setLoading(true);
-        // Fetch all 2025 data
-        const data = await api.getSteps('2025-01-01', '2025-12-31');
+        // Fetch config and steps in parallel
+        const [configData, stepsData] = await Promise.all([
+          api.getConfig(),
+          api.getSteps('2025-01-01', '2025-12-31'),
+        ]);
+        setConfig(configData);
         // Sort by date descending (most recent first)
-        const sorted = [...data].sort((a, b) =>
+        const sorted = [...stepsData].sort((a, b) =>
           new Date(b.step_date) - new Date(a.step_date)
         );
         setSteps(sorted);
@@ -30,12 +32,12 @@ export function StepsDetail2025() {
         setLoading(false);
       }
     }
-    fetchSteps();
+    fetchData();
   }, []);
 
   // Calculate totals
   const totalSteps = steps.reduce((sum, day) => sum + day.steps, 0);
-  const totalMiles = totalSteps / STEPS_PER_MILE;
+  const totalMiles = totalSteps / config.steps_per_mile;
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -151,8 +153,8 @@ export function StepsDetail2025() {
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {steps.map((day) => {
-                      const miles = day.steps / STEPS_PER_MILE;
-                      const metGoal = day.steps >= DAILY_GOAL;
+                      const miles = day.steps / config.steps_per_mile;
+                      const metGoal = day.steps >= config.daily_goal;
                       return (
                         <tr
                           key={day.step_date}

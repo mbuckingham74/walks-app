@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     api_key: SecretStr = SecretStr("")  # Required for mutating endpoints
 
+    # Business constants
+    steps_per_mile: int = 2000
+    daily_goal: int = 15000
+
     @property
     def database_url(self) -> URL:
         """Build database URL safely using URL.create.

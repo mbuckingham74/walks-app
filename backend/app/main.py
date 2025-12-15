@@ -71,16 +71,14 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 
 # --- Data Retrieval ---
 
-STEPS_PER_MILE = 2000
-DAILY_GOAL = 15000
 EST = ZoneInfo("America/New_York")
 
 
@@ -118,11 +116,11 @@ async def get_stats(
     best_day_row = best_day_result.first()
     best_day_date = best_day_row[0].isoformat() if best_day_row else None
 
-    # Get days goal met (goal >= DAILY_GOAL)
+    # Get days goal met (goal >= daily_goal)
     goal_met_result = await db.execute(
         select(func.count(DailySteps.id))
         .where(extract("year", DailySteps.step_date) == year)
-        .where(DailySteps.steps >= DAILY_GOAL)
+        .where(DailySteps.steps >= settings.daily_goal)
     )
     days_goal_met = goal_met_result.scalar() or 0
 
@@ -146,7 +144,7 @@ async def get_stats(
         if current_streak == 0 and step_date <= today:
             expected_date = step_date
 
-        if step_date == expected_date and steps >= DAILY_GOAL:
+        if step_date == expected_date and steps >= settings.daily_goal:
             current_streak += 1
             expected_date = step_date - timedelta(days=1)
         elif step_date == expected_date:
@@ -176,9 +174,9 @@ async def get_stats(
     if last_week_steps > 0:
         week_comparison = round(((this_week_steps - last_week_steps) / last_week_steps) * 100, 1)
 
-    # Convert steps to miles (2000 steps = 1 mile)
-    total_distance = total_steps / STEPS_PER_MILE
-    avg_daily_miles = avg_steps / STEPS_PER_MILE
+    # Convert steps to miles
+    total_distance = total_steps / settings.steps_per_mile
+    avg_daily_miles = avg_steps / settings.steps_per_mile
 
     position = calculate_position(total_distance)
 
@@ -246,6 +244,7 @@ async def get_steps(
 @app.post("/api/steps", response_model=StepsResponse)
 async def upsert_steps(
     data: StepsInput,
+    _: None = Depends(verify_api_key),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -255,7 +254,7 @@ async def upsert_steps(
     stmt = insert(DailySteps).values(
         step_date=data.date,
         steps=data.steps,
-        goal=DAILY_GOAL,
+        goal=settings.daily_goal,
     )
     # Only update if new value is higher than existing
     stmt = stmt.on_duplicate_key_update(
@@ -308,6 +307,15 @@ async def get_route():
             for wp in waypoints
         ]
     )
+
+
+@app.get("/api/config")
+async def get_config():
+    """Get public configuration values for frontend."""
+    return {
+        "steps_per_mile": settings.steps_per_mile,
+        "daily_goal": settings.daily_goal,
+    }
 
 
 @app.get("/api/health")

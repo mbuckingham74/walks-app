@@ -59,6 +59,9 @@ export const api = {
   // Route
   getRoute: ({ signal } = {}) => fetchAPI('/route', { signal }),
 
+  // Config
+  getConfig: ({ signal } = {}) => fetchAPI('/config', { signal }),
+
   // Sync
   triggerSync: () => fetchAPI('/sync', { method: 'POST' }),
   triggerActivitiesSync: () => fetchAPI('/sync/activities', { method: 'POST' }),

@@ -3,6 +3,7 @@ import { useStats } from '../hooks/useStats';
 import { useSteps } from '../hooks/useSteps';
 import { useRoute } from '../hooks/useRoute';
 import { useTheme } from '../hooks/useTheme';
+import { useConfig } from '../hooks/useConfig';
 import { StatsCards } from './StatsCards';
 import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
@@ -15,9 +16,10 @@ export function Dashboard() {
   // Fetch full year of steps for the chart
   const { steps, loading: stepsLoading } = useSteps('2025-01-01', '2025-12-31');
   const { route, loading: routeLoading } = useRoute();
+  const { config, loading: configLoading } = useConfig();
   const { isDark, toggle: toggleTheme } = useTheme();
 
-  const isLoading = statsLoading || stepsLoading || routeLoading;
+  const isLoading = statsLoading || stepsLoading || routeLoading || configLoading;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -193,7 +195,7 @@ export function Dashboard() {
                 </p>
               </div>
               <div className="h-[300px] p-4">
-                <StepsChart steps={steps} isDark={isDark} />
+                <StepsChart steps={steps} isDark={isDark} dailyGoal={config.daily_goal} />
               </div>
             </div>
           </div>

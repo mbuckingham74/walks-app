@@ -18,14 +18,14 @@ const DATE_RANGES = [
   { label: 'All', value: null },
 ];
 
-const DAILY_GOAL = 15000;
+const DEFAULT_DAILY_GOAL = 15000;
 
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload, label, dailyGoal }) {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
   const steps = data.steps ?? 0;
-  const goal = data.goal ?? DAILY_GOAL;
+  const goal = data.goal ?? dailyGoal;
   const metGoal = steps >= goal;
 
   return (
@@ -42,7 +42,7 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export function StepsChart({ steps, isDark = false }) {
+export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GOAL }) {
   const [range, setRange] = useState(30);
 
   // Theme-aware colors for Recharts
@@ -60,7 +60,7 @@ export function StepsChart({ steps, isDark = false }) {
         const dateKey = s.step_date; // YYYY-MM-DD format
         stepsMap.set(dateKey, {
           steps: s.steps ?? 0,
-          goal: s.goal ?? DAILY_GOAL,
+          goal: s.goal ?? dailyGoal,
         });
       });
     }
@@ -100,16 +100,16 @@ export function StepsChart({ steps, isDark = false }) {
           day: 'numeric',
         }),
         steps: data?.steps ?? 0,
-        goal: data?.goal ?? DAILY_GOAL,
+        goal: data?.goal ?? dailyGoal,
       });
       current.setDate(current.getDate() + 1);
     }
 
     return result;
-  }, [steps, range]);
+  }, [steps, range, dailyGoal]);
 
   const avgGoal = useMemo(() => {
-    if (chartData.length === 0) return DAILY_GOAL;
+    if (chartData.length === 0) return dailyGoal;
     const sum = chartData.reduce((acc, d) => acc + d.goal, 0);
     return Math.round(sum / chartData.length);
   }, [chartData]);
@@ -164,7 +164,7 @@ export function StepsChart({ steps, isDark = false }) {
               axisLine={false}
               tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip dailyGoal={dailyGoal} />} />
             <ReferenceLine
               y={avgGoal}
               stroke={chartColors.reference}
