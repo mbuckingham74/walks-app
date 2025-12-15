@@ -244,7 +244,6 @@ async def get_steps(
 @app.post("/api/steps", response_model=StepsResponse)
 async def upsert_steps(
     data: StepsInput,
-    _: None = Depends(verify_api_key),
     db: AsyncSession = Depends(get_db)
 ):
     """
