@@ -173,7 +173,7 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
     week_start = today - timedelta(days=today.weekday())  # Monday
     last_week_start = week_start - timedelta(days=7)
 
-    # Single query for all aggregates + best day + goal met + weekly comparisons
+    # Single query for year-specific aggregates
     combined_sql = text("""
         SELECT
             COALESCE(SUM(steps), 0) as total_steps,
@@ -183,13 +183,20 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
             (SELECT step_date FROM daily_steps
              WHERE YEAR(step_date) = :year
              ORDER BY steps DESC, step_date ASC LIMIT 1) as best_day_date,
-            SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END) as days_goal_met,
+            SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END) as days_goal_met
+        FROM daily_steps
+        WHERE YEAR(step_date) = :year
+    """)
+
+    # Separate query for week comparison (spans across years)
+    week_sql = text("""
+        SELECT
             COALESCE(SUM(CASE WHEN step_date >= :week_start AND step_date <= :today
                          THEN steps ELSE 0 END), 0) as this_week_steps,
             COALESCE(SUM(CASE WHEN step_date >= :last_week_start AND step_date < :week_start
                          THEN steps ELSE 0 END), 0) as last_week_steps
         FROM daily_steps
-        WHERE YEAR(step_date) = :year
+        WHERE step_date >= :last_week_start AND step_date <= :today
     """)
 
     result = await db.execute(
@@ -197,9 +204,6 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
         {
             "year": year,
             "daily_goal": settings.daily_goal,
-            "week_start": week_start,
-            "last_week_start": last_week_start,
-            "today": today
         }
     )
     row = result.first()
@@ -210,8 +214,19 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
     max_steps = int(row[3])
     best_day_date = row[4].isoformat() if row[4] else None
     days_goal_met = int(row[5])
-    this_week_steps = int(row[6])
-    last_week_steps = int(row[7])
+
+    # Get week comparison (across years)
+    week_result = await db.execute(
+        week_sql,
+        {
+            "week_start": week_start,
+            "last_week_start": last_week_start,
+            "today": today
+        }
+    )
+    week_row = week_result.first()
+    this_week_steps = int(week_row[0])
+    last_week_steps = int(week_row[1])
 
     # Calculate streak using window function query
     current_streak = await _calculate_streak_sql(db, year, today, settings.daily_goal)
