@@ -12,14 +12,15 @@ import { ROUTE_CONFIG } from '../config';
 import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 
 export function Dashboard() {
-  const { stats, loading: statsLoading } = useStats();
-  // Fetch full year of steps for the chart
-  const { steps, loading: stepsLoading } = useSteps('2025-01-01', '2025-12-31');
+  const { stats, loading: statsLoading } = useStats(); // Current year (2026)
+  const { stats: stats2025, loading: stats2025Loading } = useStats(2025);
+  // Fetch recent steps for the chart (last 90 days across years)
+  const { steps, loading: stepsLoading } = useSteps('2025-10-01', '2026-12-31');
   const { route, loading: routeLoading } = useRoute();
   const { config, loading: configLoading } = useConfig();
   const { isDark, toggle: toggleTheme } = useTheme();
 
-  const isLoading = statsLoading || stepsLoading || routeLoading || configLoading;
+  const isLoading = statsLoading || stats2025Loading || stepsLoading || routeLoading || configLoading;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -144,23 +145,29 @@ export function Dashboard() {
                   </div>
                 )}
 
-                {/* Year info */}
+                {/* All-time progress */}
                 {stats && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-200">
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                      {stats.year} Statistics
+                      All-Time Progress
                     </h3>
                     <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Total steps</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {stats.all_time_steps?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Total distance</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {stats.all_time_distance_miles?.toLocaleString() || 0} mi
+                        </span>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Miles remaining</span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           {stats.miles_remaining?.toLocaleString() || 0} mi
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Days tracked</span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {stats.total_days}
                         </span>
                       </div>
                       {stats.crossings_completed > 0 && (
@@ -172,15 +179,57 @@ export function Dashboard() {
                         </div>
                       )}
                     </div>
-                    <Link
-                      to="/2025"
-                      className="mt-4 flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
-                    >
-                      <span>View 2025 Details</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </Link>
                   </div>
                 )}
+
+                {/* Year-by-year breakdown */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-200">
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+                    Year-by-Year
+                  </h3>
+                  <div className="space-y-3">
+                    {/* 2026 */}
+                    {stats && (
+                      <Link
+                        to="/2026"
+                        className="block p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-gray-900 dark:text-white">2026</span>
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {stats.total_steps?.toLocaleString() || 0} steps
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {stats.total_days} days
+                          </span>
+                        </div>
+                      </Link>
+                    )}
+                    {/* 2025 */}
+                    {stats2025 && (
+                      <Link
+                        to="/2025"
+                        className="block p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-gray-900 dark:text-white">2025</span>
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {stats2025.total_steps?.toLocaleString() || 0} steps
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {stats2025.total_days} days
+                          </span>
+                        </div>
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
