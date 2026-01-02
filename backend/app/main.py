@@ -159,6 +159,14 @@ async def _calculate_streak_sql(db: AsyncSession, year: int, today: date, daily_
     return result.scalar() or 0
 
 
+async def _get_all_time_steps(db: AsyncSession) -> int:
+    """Get total steps across all years."""
+    result = await db.execute(
+        select(func.coalesce(func.sum(DailySteps.steps), 0))
+    )
+    return int(result.scalar())
+
+
 async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dict:
     """Compute all statistics in optimized queries."""
     today = datetime.now(EST).date()
@@ -219,8 +227,13 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
 
     position = calculate_position(total_distance)
 
-    # Calculate ETA to Boston
-    miles_remaining = TOTAL_ROUTE_DISTANCE - position["effective_miles"]
+    # Calculate all-time position for the map (across all years)
+    all_time_steps = await _get_all_time_steps(db)
+    all_time_distance = all_time_steps / settings.steps_per_mile
+    all_time_position = calculate_position(all_time_distance)
+
+    # Calculate ETA to Boston (based on all-time progress)
+    miles_remaining = TOTAL_ROUTE_DISTANCE - all_time_position["effective_miles"]
     days_to_boston = None
     eta_date = None
     if avg_daily_miles > 0 and miles_remaining > 0:
@@ -232,7 +245,7 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
         "total_distance_miles": round(total_distance, 2),
         "total_steps": total_steps,
         "total_days": total_days,
-        "crossings_completed": position["crossings_completed"],
+        "crossings_completed": all_time_position["crossings_completed"],
         "avg_daily_steps": avg_steps,
         "best_day_steps": max_steps,
         "best_day_date": best_day_date,
@@ -246,15 +259,17 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
         "days_to_boston": days_to_boston,
         "eta_date": eta_date,
         "current_position": {
-            "lat": position["lat"],
-            "lon": position["lon"],
-            "miles_traveled": position["miles_traveled"],
-            "effective_miles": position["effective_miles"],
-            "current_waypoint": position["current_waypoint"],
-            "next_waypoint": position["next_waypoint"],
-            "miles_to_next": round(position["miles_to_next"], 1),
-            "percent_complete": round(position["percent_complete"], 1),
-        }
+            "lat": all_time_position["lat"],
+            "lon": all_time_position["lon"],
+            "miles_traveled": all_time_position["miles_traveled"],
+            "effective_miles": all_time_position["effective_miles"],
+            "current_waypoint": all_time_position["current_waypoint"],
+            "next_waypoint": all_time_position["next_waypoint"],
+            "miles_to_next": round(all_time_position["miles_to_next"], 1),
+            "percent_complete": round(all_time_position["percent_complete"], 1),
+        },
+        "all_time_steps": all_time_steps,
+        "all_time_distance_miles": round(all_time_distance, 2),
     }
 
 
