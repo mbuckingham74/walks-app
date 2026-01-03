@@ -69,10 +69,4 @@ export const api = {
 
   // Config
   getConfig: ({ signal } = {}) => fetchAPI('/config', { signal }),
-
-  // Sync
-  triggerSync: () => fetchAPI('/sync', { method: 'POST' }),
-  triggerActivitiesSync: () => fetchAPI('/sync/activities', { method: 'POST' }),
-  triggerStepsSync: () => fetchAPI('/sync/steps', { method: 'POST' }),
-  getSyncStatus: () => fetchAPI('/sync/status'),
 };
