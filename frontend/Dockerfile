@@ -12,6 +12,10 @@ RUN npm ci --ignore-scripts
 # Copy source code
 COPY . .
 
+# Build argument for API key (required for authenticated API calls)
+ARG VITE_API_KEY
+ENV VITE_API_KEY=$VITE_API_KEY
+
 # Build the app
 RUN npm run build
 

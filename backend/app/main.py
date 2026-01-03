@@ -87,18 +87,60 @@ EST = ZoneInfo("America/New_York")
 async def _compute_data_hash(db: AsyncSession, year: int, today: date) -> str:
     """Compute a hash of the underlying data to detect changes.
 
-    Includes: max step_date, total steps, record count, and today's date
-    (today matters because streak/week calculations are date-relative).
+    Includes factors that affect stats:
+    - Year-specific: max date, sum, count, individual daily values (for streaks)
+    - Cross-year: recent data for week comparisons, all-time totals for position
+    - Time-relative: today's date (streak/week calculations are date-relative)
     """
-    result = await db.execute(
+    # Year-specific aggregates
+    year_result = await db.execute(
         select(
             func.max(DailySteps.step_date),
             func.sum(DailySteps.steps),
             func.count(DailySteps.id)
         ).where(extract("year", DailySteps.step_date) == year)
     )
-    row = result.first()
-    hash_input = f"{row[0]}|{row[1]}|{row[2]}|{today.isoformat()}"
+    year_row = year_result.first()
+
+    # Get checksum of recent daily values (affects streaks - last 30 days)
+    # Using GROUP_CONCAT to create a fingerprint of per-day data
+    streak_window_start = today - timedelta(days=30)
+    daily_result = await db.execute(
+        text("""
+            SELECT GROUP_CONCAT(CONCAT(step_date, ':', steps) ORDER BY step_date SEPARATOR ',')
+            FROM daily_steps
+            WHERE step_date >= :start_date
+        """),
+        {"start_date": streak_window_start}
+    )
+    daily_fingerprint = daily_result.scalar() or ""
+
+    # All-time totals (for position calculation across years)
+    all_time_result = await db.execute(
+        select(func.sum(DailySteps.steps), func.count(DailySteps.id))
+    )
+    all_time_row = all_time_result.first()
+
+    # Week comparison needs data from past 2 weeks (cross-year)
+    week_start = today - timedelta(days=today.weekday())
+    two_weeks_ago = week_start - timedelta(days=7)
+    week_result = await db.execute(
+        select(func.sum(DailySteps.steps)).where(
+            DailySteps.step_date >= two_weeks_ago
+        )
+    )
+    recent_weeks_sum = week_result.scalar() or 0
+
+    hash_input = "|".join([
+        str(year_row[0]),  # max date for year
+        str(year_row[1]),  # sum for year
+        str(year_row[2]),  # count for year
+        daily_fingerprint,  # per-day values for streak calculation
+        str(all_time_row[0]),  # all-time sum
+        str(all_time_row[1]),  # all-time count
+        str(recent_weeks_sum),  # recent weeks data
+        today.isoformat(),  # today's date
+    ])
     return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
 
@@ -291,7 +333,8 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
 @app.get("/api/stats")
 async def get_stats(
     year: Optional[int] = Query(default=None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(verify_api_key)
 ):
     """Get dashboard statistics based on daily steps.
 
@@ -340,7 +383,8 @@ async def get_stats(
 async def get_steps(
     start: Optional[date] = Query(default=None),
     end: Optional[date] = Query(default=None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(verify_api_key)
 ):
     """Get daily steps data within a date range."""
     if not start:
@@ -360,7 +404,8 @@ async def get_steps(
 @app.post("/api/steps", response_model=StepsResponse)
 async def upsert_steps(
     data: StepsInput,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(verify_api_key)
 ):
     """
     Upsert daily steps from iOS Shortcut.
@@ -391,7 +436,8 @@ async def upsert_steps(
 async def get_activities(
     year: Optional[int] = Query(default=None),
     limit: int = Query(default=50, le=500),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(verify_api_key)
 ):
     """Get walking activities list."""
     query = select(Activity)

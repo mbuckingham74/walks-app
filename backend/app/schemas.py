@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 
 
@@ -68,6 +68,16 @@ class StatsSchema(BaseModel):
 class StepsInput(BaseModel):
     date: date
     steps: int
+
+    @field_validator("steps")
+    @classmethod
+    def validate_steps_bounds(cls, v: int) -> int:
+        """Validate steps is within reasonable bounds."""
+        if v < 0:
+            raise ValueError("steps cannot be negative")
+        if v > 500_000:
+            raise ValueError("steps exceeds maximum allowed value (500,000)")
+        return v
 
 
 class StepsResponse(BaseModel):

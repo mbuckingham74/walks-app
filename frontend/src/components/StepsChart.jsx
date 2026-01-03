@@ -57,7 +57,7 @@ export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GO
     const stepsMap = new Map();
     if (steps && steps.length > 0) {
       steps.forEach(s => {
-        const dateKey = s.step_date; // YYYY-MM-DD format
+        const dateKey = s.step_date; // YYYY-MM-DD format from API
         stepsMap.set(dateKey, {
           steps: s.steps ?? 0,
           goal: s.goal ?? dailyGoal,
@@ -65,16 +65,35 @@ export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GO
       });
     }
 
+    // Helper to format date as YYYY-MM-DD in local timezone (not UTC)
+    const toLocalDateString = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     // Determine date range
     const today = new Date();
     let startDate, endDate;
 
     if (range === null) {
-      // "All" - show full year
-      startDate = new Date(today.getFullYear(), 0, 1); // Jan 1
-      endDate = new Date(today.getFullYear(), 11, 31); // Dec 31
+      // "All" - show all data from earliest to latest date in dataset
+      if (steps && steps.length > 0) {
+        const dates = steps.map(s => new Date(s.step_date + 'T00:00:00'));
+        startDate = new Date(Math.min(...dates));
+        endDate = new Date(Math.max(...dates));
+        // Extend to today if data exists beyond
+        if (today > endDate) {
+          endDate = new Date(today);
+        }
+      } else {
+        // Fallback to current year if no data
+        startDate = new Date(today.getFullYear(), 0, 1);
+        endDate = new Date(today.getFullYear(), 11, 31);
+      }
     } else if (range === 365) {
-      // "Year" - show full year
+      // "Year" - show full current year
       startDate = new Date(today.getFullYear(), 0, 1);
       endDate = new Date(today.getFullYear(), 11, 31);
     } else if (range === 'month') {
@@ -88,11 +107,11 @@ export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GO
       startDate.setDate(startDate.getDate() - range);
     }
 
-    // Generate all dates in range
+    // Generate all dates in range using local timezone
     const result = [];
     const current = new Date(startDate);
     while (current <= endDate) {
-      const dateKey = current.toISOString().split('T')[0];
+      const dateKey = toLocalDateString(current);
       const data = stepsMap.get(dateKey);
       result.push({
         date: current.toLocaleDateString('en-US', {
