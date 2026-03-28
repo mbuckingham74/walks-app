@@ -104,7 +104,7 @@ export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GO
       // Week or Last 30 - show just that range from today backwards
       endDate = new Date(today);
       startDate = new Date(today);
-      startDate.setDate(startDate.getDate() - range);
+      startDate.setDate(startDate.getDate() - (range - 1));
     }
 
     // Generate all dates in range using local timezone

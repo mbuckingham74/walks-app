@@ -38,12 +38,12 @@ async def verify_api_key(
     x_api_key: Optional[str] = Depends(api_key_header),
     settings: Settings = Depends(get_settings),
 ):
-    """Dependency to verify API key for mutating endpoints."""
+    """Dependency to verify API key for private endpoints."""
     configured_key = settings.api_key.get_secret_value().strip()
     if not configured_key:
         raise HTTPException(
-            status_code=500,
-            detail="API key not configured on server"
+            status_code=404,
+            detail="Not found"
         )
     if not x_api_key:
         raise HTTPException(
@@ -84,7 +84,7 @@ app.add_middleware(
 EST = ZoneInfo("America/New_York")
 
 
-async def _compute_data_hash(db: AsyncSession, year: int, today: date) -> str:
+async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings: Settings) -> str:
     """Compute a hash of the underlying data to detect changes.
 
     Includes factors that affect stats:
@@ -140,6 +140,8 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date) -> str:
         str(all_time_row[1]),  # all-time count
         str(recent_weeks_sum),  # recent weeks data
         today.isoformat(),  # today's date
+        str(settings.steps_per_mile),  # distance conversion
+        str(settings.daily_goal),  # goal-related stats
     ])
     return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
@@ -282,8 +284,6 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
     total_distance = total_steps / settings.steps_per_mile
     avg_daily_miles = avg_steps / settings.steps_per_mile
 
-    position = calculate_position(total_distance)
-
     # Calculate all-time position for the map (across all years)
     all_time_steps = await _get_all_time_steps(db)
     all_time_distance = all_time_steps / settings.steps_per_mile
@@ -334,7 +334,6 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
 async def get_stats(
     year: Optional[int] = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _: None = Depends(verify_api_key)
 ):
     """Get dashboard statistics based on daily steps.
 
@@ -347,7 +346,7 @@ async def get_stats(
     today = datetime.now(EST).date()
 
     # Check cache
-    current_hash = await _compute_data_hash(db, year, today)
+    current_hash = await _compute_data_hash(db, year, today, settings)
 
     cache_result = await db.execute(
         select(StatsCache).where(StatsCache.year == year)
@@ -384,13 +383,13 @@ async def get_steps(
     start: Optional[date] = Query(default=None),
     end: Optional[date] = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _: None = Depends(verify_api_key)
 ):
     """Get daily steps data within a date range."""
+    today = datetime.now(EST).date()
     if not start:
-        start = date.today() - timedelta(days=30)
+        start = today - timedelta(days=30)
     if not end:
-        end = date.today()
+        end = today
 
     result = await db.execute(
         select(DailySteps)
@@ -405,10 +404,9 @@ async def get_steps(
 async def upsert_steps(
     data: StepsInput,
     db: AsyncSession = Depends(get_db),
-    _: None = Depends(verify_api_key)
 ):
     """
-    Upsert daily steps from iOS Shortcut.
+    Public upsert endpoint for the iOS Shortcut.
     Insert if date doesn't exist, update only if new value is higher.
     """
     stmt = insert(DailySteps).values(

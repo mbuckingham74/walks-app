@@ -82,6 +82,7 @@ npm run dev
 | `MYSQL_DATABASE` | Database name |
 | `MYSQL_ROOT_PASSWORD` | Root password for initial setup |
 | `CORS_ORIGINS` | Allowed origins for API |
+| `API_KEY` | Optional key for the private `/api/activities` endpoint |
 
 See `.env.example` for a complete template.
 
@@ -89,11 +90,12 @@ See `.env.example` for a complete template.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/steps` | Upsert daily steps (for iOS Shortcut) |
+| `POST` | `/api/steps` | Upsert daily steps (for iOS Shortcut, no auth) |
 | `GET` | `/api/stats` | Dashboard statistics for a year |
 | `GET` | `/api/steps` | Daily steps data with date range |
 | `GET` | `/api/route` | I-90 waypoints for map rendering |
 | `GET` | `/api/config` | Public configuration (steps_per_mile, daily_goal) |
+| `GET` | `/api/activities` | Optional private activity feed (requires `API_KEY`) |
 | `GET` | `/api/health` | Health check |
 
 ### iOS Shortcut Integration
@@ -105,7 +107,6 @@ Create an iOS Shortcut that:
 ```
 POST https://your-domain.com/api/steps
 Content-Type: application/json
-X-API-Key: your_api_key_here
 
 {
   "date": "2025-12-13",
@@ -113,7 +114,7 @@ X-API-Key: your_api_key_here
 }
 ```
 
-Run the shortcut daily (manually or via automation) to sync your steps.
+The write endpoint is intentionally public for the shortcut flow, with server-side validation and rate limiting to reduce abuse. Run the shortcut daily (manually or via automation) to sync your steps.
 
 ## Route Waypoints
 

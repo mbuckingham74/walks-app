@@ -36,13 +36,12 @@ ssh tachyon "cd ~/walks-tracker/docker && docker compose up -d --build"
 - **Conversion:** 2000 steps = 1 mile (configurable via STEPS_PER_MILE env var)
 - **Daily goal:** 15000 steps (configurable via DAILY_GOAL env var)
 - **Route:** 2850 miles, 34 waypoints across 11 states
-- **Data source:** iOS Shortcut posts to POST /api/steps with X-API-Key header
+- **Data source:** iOS Shortcut posts to the public `POST /api/steps` endpoint
 
 ## API Authentication
 
-- `POST /api/steps` requires `X-API-Key` header
-- Key configured via `API_KEY` environment variable
-- GET endpoints are public
+- `GET /api/stats`, `GET /api/steps`, `GET /api/route`, and `POST /api/steps` are public
+- `GET /api/activities` is optional and private when `API_KEY` is configured
 
 ## Common Tasks
 

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from math import sqrt
 
 
 @dataclass
@@ -64,6 +63,10 @@ def calculate_position(total_miles: float) -> dict:
     # Handle multiple crossings
     effective_miles = total_miles % TOTAL_ROUTE_DISTANCE
     crossings = int(total_miles // TOTAL_ROUTE_DISTANCE)
+
+    # Exact route completions should render at Boston, not reset to Seattle.
+    if total_miles > 0 and effective_miles == 0:
+        effective_miles = TOTAL_ROUTE_DISTANCE
 
     # Find current segment
     current_wp = ROUTE_WAYPOINTS[0]

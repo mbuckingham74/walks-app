@@ -12,15 +12,18 @@ import { ROUTE_CONFIG } from '../config';
 import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 
 export function Dashboard() {
-  const { stats, loading: statsLoading } = useStats(); // Current year (2026)
-  const { stats: stats2025, loading: stats2025Loading } = useStats(2025);
-  // Fetch recent steps for the chart (last 90 days across years)
-  const { steps, loading: stepsLoading } = useSteps('2025-10-01', '2026-12-31');
+  const currentYear = new Date().getFullYear();
+  const previousYear = currentYear - 1;
+
+  const { stats, loading: statsLoading } = useStats(currentYear);
+  const { stats: previousYearStats, loading: previousYearLoading } = useStats(previousYear);
+  // Load all available history without requiring a separate metadata endpoint.
+  const { steps, loading: stepsLoading } = useSteps('2000-01-01', `${currentYear}-12-31`);
   const { route, loading: routeLoading } = useRoute();
   const { config, loading: configLoading } = useConfig();
   const { isDark, toggle: toggleTheme } = useTheme();
 
-  const isLoading = statsLoading || stats2025Loading || stepsLoading || routeLoading || configLoading;
+  const isLoading = statsLoading || previousYearLoading || stepsLoading || routeLoading || configLoading;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -188,14 +191,14 @@ export function Dashboard() {
                     Year-by-Year
                   </h3>
                   <div className="space-y-3">
-                    {/* 2026 */}
+                    {/* Current year */}
                     {stats && (
                       <Link
-                        to="/2026"
+                        to={`/${currentYear}`}
                         className="block p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-gray-900 dark:text-white">2026</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{currentYear}</span>
                           <ChevronRight className="w-4 h-4 text-gray-400" />
                         </div>
                         <div className="flex justify-between text-sm">
@@ -208,22 +211,22 @@ export function Dashboard() {
                         </div>
                       </Link>
                     )}
-                    {/* 2025 */}
-                    {stats2025 && (
+                    {/* Previous year */}
+                    {previousYearStats && (
                       <Link
-                        to="/2025"
+                        to={`/${previousYear}`}
                         className="block p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-gray-900 dark:text-white">2025</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{previousYear}</span>
                           <ChevronRight className="w-4 h-4 text-gray-400" />
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600 dark:text-gray-400">
-                            {stats2025.total_steps?.toLocaleString() || 0} steps
+                            {previousYearStats.total_steps?.toLocaleString() || 0} steps
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
-                            {stats2025.total_days} days
+                            {previousYearStats.total_days} days
                           </span>
                         </div>
                       </Link>

@@ -1,7 +1,13 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pydantic import BaseModel, field_validator
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+
+APP_TIMEZONE = ZoneInfo("America/New_York")
+MAX_BACKFILL_DAYS = 730
+MAX_FUTURE_DAYS = 1
 
 
 class ActivitySchema(BaseModel):
@@ -68,6 +74,24 @@ class StatsSchema(BaseModel):
 class StepsInput(BaseModel):
     date: date
     steps: int
+
+    @field_validator("date")
+    @classmethod
+    def validate_date_bounds(cls, value: date) -> date:
+        """Allow normal daily sync plus occasional historical backfills."""
+        today = datetime.now(APP_TIMEZONE).date()
+        earliest_allowed = today - timedelta(days=MAX_BACKFILL_DAYS)
+        latest_allowed = today + timedelta(days=MAX_FUTURE_DAYS)
+
+        if value < earliest_allowed:
+            raise ValueError(
+                f"date is too old; only the last {MAX_BACKFILL_DAYS} days are accepted"
+            )
+        if value > latest_allowed:
+            raise ValueError(
+                f"date cannot be more than {MAX_FUTURE_DAYS} day in the future"
+            )
+        return value
 
     @field_validator("steps")
     @classmethod

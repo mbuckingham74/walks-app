@@ -1,5 +1,4 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-const API_KEY = import.meta.env.VITE_API_KEY || '';
 
 async function fetchAPI(endpoint, options = {}) {
   const { headers, ...restOptions } = options;
@@ -7,11 +6,6 @@ async function fetchAPI(endpoint, options = {}) {
     'Content-Type': 'application/json',
     ...headers,
   };
-
-  // Add API key if configured
-  if (API_KEY) {
-    requestHeaders['X-API-Key'] = API_KEY;
-  }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: requestHeaders,
