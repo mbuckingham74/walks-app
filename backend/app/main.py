@@ -94,11 +94,24 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings:
     """
     # Year-specific aggregates
     year_result = await db.execute(
-        select(
-            func.max(DailySteps.step_date),
-            func.sum(DailySteps.steps),
-            func.count(DailySteps.id)
-        ).where(extract("year", DailySteps.step_date) == year)
+        text("""
+            SELECT
+                MAX(step_date),
+                COALESCE(SUM(steps), 0),
+                COUNT(*),
+                COALESCE(MAX(steps), 0),
+                COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0),
+                (
+                    SELECT step_date
+                    FROM daily_steps
+                    WHERE YEAR(step_date) = :year
+                    ORDER BY steps DESC, step_date ASC
+                    LIMIT 1
+                ) as best_day_date
+            FROM daily_steps
+            WHERE YEAR(step_date) = :year
+        """),
+        {"year": year, "daily_goal": settings.daily_goal}
     )
     year_row = year_result.first()
 
@@ -115,9 +128,23 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings:
     )
     daily_fingerprint = daily_result.scalar() or ""
 
-    # All-time totals (for position calculation across years)
+    # All-time aggregates (for position calculation and all-time stat cards)
     all_time_result = await db.execute(
-        select(func.sum(DailySteps.steps), func.count(DailySteps.id))
+        text("""
+            SELECT
+                COALESCE(SUM(steps), 0),
+                COUNT(*),
+                COALESCE(MAX(steps), 0),
+                COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0),
+                (
+                    SELECT step_date
+                    FROM daily_steps
+                    ORDER BY steps DESC, step_date ASC
+                    LIMIT 1
+                ) as best_day_date
+            FROM daily_steps
+        """),
+        {"daily_goal": settings.daily_goal}
     )
     all_time_row = all_time_result.first()
 
@@ -135,9 +162,15 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings:
         str(year_row[0]),  # max date for year
         str(year_row[1]),  # sum for year
         str(year_row[2]),  # count for year
+        str(year_row[3]),  # max steps for year
+        str(year_row[4]),  # goal-met days for year
+        str(year_row[5]),  # best day date for year
         daily_fingerprint,  # per-day values for streak calculation
         str(all_time_row[0]),  # all-time sum
         str(all_time_row[1]),  # all-time count
+        str(all_time_row[2]),  # all-time max steps
+        str(all_time_row[3]),  # all-time goal-met days
+        str(all_time_row[4]),  # all-time best day date
         str(recent_weeks_sum),  # recent weeks data
         today.isoformat(),  # today's date
         str(settings.steps_per_mile),  # distance conversion
@@ -146,13 +179,24 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings:
     return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
 
-async def _calculate_streak_sql(db: AsyncSession, year: int, today: date, daily_goal: int) -> int:
+async def _calculate_streak_sql(
+    db: AsyncSession,
+    today: date,
+    daily_goal: int,
+    year: Optional[int] = None,
+) -> int:
     """Calculate current streak using MySQL window functions.
 
     Uses LAG to detect gaps in consecutive goal-met days, then finds
     the streak that includes today or yesterday.
     """
     yesterday = today - timedelta(days=1)
+    date_filter = ""
+    params = {"daily_goal": daily_goal, "yesterday": yesterday}
+
+    if year is not None:
+        date_filter = "AND YEAR(step_date) = :year"
+        params["year"] = year
 
     # This query:
     # 1. Filters to days where goal was met
@@ -160,14 +204,14 @@ async def _calculate_streak_sql(db: AsyncSession, year: int, today: date, daily_
     # 3. Calculates if there's a gap (more than 1 day between consecutive goal-met days)
     # 4. Creates streak groups using a running sum of gap flags
     # 5. Finds the streak containing today or yesterday and counts its days
-    streak_sql = text("""
+    streak_sql = text(f"""
         WITH goal_met_days AS (
             SELECT
                 step_date,
                 LAG(step_date) OVER (ORDER BY step_date) as prev_date
             FROM daily_steps
-            WHERE YEAR(step_date) = :year
-              AND steps >= :daily_goal
+            WHERE steps >= :daily_goal
+              {date_filter}
         ),
         with_gaps AS (
             SELECT
@@ -196,10 +240,7 @@ async def _calculate_streak_sql(db: AsyncSession, year: int, today: date, daily_
         WHERE max_date >= :yesterday
     """)
 
-    result = await db.execute(
-        streak_sql,
-        {"year": year, "daily_goal": daily_goal, "yesterday": yesterday}
-    )
+    result = await db.execute(streak_sql, params)
     return result.scalar() or 0
 
 
@@ -227,9 +268,21 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
             (SELECT step_date FROM daily_steps
              WHERE YEAR(step_date) = :year
              ORDER BY steps DESC, step_date ASC LIMIT 1) as best_day_date,
-            SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END) as days_goal_met
+            COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0) as days_goal_met
         FROM daily_steps
         WHERE YEAR(step_date) = :year
+    """)
+
+    all_time_sql = text("""
+        SELECT
+            COALESCE(SUM(steps), 0) as total_steps,
+            COUNT(*) as total_days,
+            COALESCE(AVG(steps), 0) as avg_steps,
+            COALESCE(MAX(steps), 0) as max_steps,
+            (SELECT step_date FROM daily_steps
+             ORDER BY steps DESC, step_date ASC LIMIT 1) as best_day_date,
+            COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0) as days_goal_met
+        FROM daily_steps
     """)
 
     # Separate query for week comparison (spans across years)
@@ -259,6 +312,18 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
     best_day_date = row[4].isoformat() if row[4] else None
     days_goal_met = int(row[5])
 
+    all_time_result = await db.execute(
+        all_time_sql,
+        {"daily_goal": settings.daily_goal}
+    )
+    all_time_row = all_time_result.first()
+    all_time_steps = int(all_time_row[0])
+    all_time_total_days = int(all_time_row[1])
+    all_time_avg_steps = int(all_time_row[2])
+    all_time_best_day_steps = int(all_time_row[3])
+    all_time_best_day_date = all_time_row[4].isoformat() if all_time_row[4] else None
+    all_time_days_goal_met = int(all_time_row[5])
+
     # Get week comparison (across years)
     week_result = await db.execute(
         week_sql,
@@ -273,7 +338,8 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
     last_week_steps = int(week_row[1])
 
     # Calculate streak using window function query
-    current_streak = await _calculate_streak_sql(db, year, today, settings.daily_goal)
+    current_streak = await _calculate_streak_sql(db, today, settings.daily_goal, year=year)
+    all_time_current_streak = await _calculate_streak_sql(db, today, settings.daily_goal)
 
     # Week comparison
     week_comparison = None
@@ -285,7 +351,6 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
     avg_daily_miles = avg_steps / settings.steps_per_mile
 
     # Calculate all-time position for the map (across all years)
-    all_time_steps = await _get_all_time_steps(db)
     all_time_distance = all_time_steps / settings.steps_per_mile
     all_time_position = calculate_position(all_time_distance)
 
@@ -326,7 +391,14 @@ async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dic
             "percent_complete": round(all_time_position["percent_complete"], 1),
         },
         "all_time_steps": all_time_steps,
+        "all_time_total_days": all_time_total_days,
         "all_time_distance_miles": round(all_time_distance, 2),
+        "all_time_avg_daily_steps": all_time_avg_steps,
+        "all_time_best_day_steps": all_time_best_day_steps,
+        "all_time_best_day_date": all_time_best_day_date,
+        "all_time_days_goal_met": all_time_days_goal_met,
+        "all_time_goal_met_percentage": round((all_time_days_goal_met / all_time_total_days * 100), 1) if all_time_total_days > 0 else 0,
+        "all_time_current_streak": all_time_current_streak,
     }
 
 

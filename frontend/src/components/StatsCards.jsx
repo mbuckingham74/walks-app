@@ -10,42 +10,51 @@ function parseLocalDate(dateStr) {
 export function StatsCards({ stats }) {
   if (!stats) return null;
 
+  const totalDistanceMiles = stats.all_time_distance_miles ?? stats.total_distance_miles ?? 0;
+  const totalSteps = stats.all_time_steps ?? stats.total_steps ?? 0;
+  const avgDailySteps = stats.all_time_avg_daily_steps ?? stats.avg_daily_steps ?? 0;
+  const currentStreak = stats.all_time_current_streak ?? stats.current_streak ?? 0;
+  const bestDaySteps = stats.all_time_best_day_steps ?? stats.best_day_steps ?? 0;
+  const bestDayDate = stats.all_time_best_day_date ?? stats.best_day_date;
+  const daysGoalMet = stats.all_time_days_goal_met ?? stats.days_goal_met ?? 0;
+  const goalMetPercentage = stats.all_time_goal_met_percentage ?? stats.goal_met_percentage ?? 0;
+
   const cards = [
     {
       label: 'Total Distance',
-      value: `${stats.total_distance_miles.toLocaleString()} mi`,
+      value: `${totalDistanceMiles.toLocaleString()} mi`,
       icon: MapPin,
       color: 'bg-primary-500',
     },
     {
       label: 'Total Steps',
-      value: stats.total_steps?.toLocaleString() || '0',
+      value: totalSteps.toLocaleString(),
       icon: Footprints,
       color: 'bg-accent-500',
     },
     {
       label: 'Daily Average',
-      value: stats.avg_daily_steps?.toLocaleString() || '0',
+      value: avgDailySteps.toLocaleString(),
       icon: TrendingUp,
       color: 'bg-violet-500',
     },
     {
       label: 'Current Streak',
-      value: `${stats.current_streak || 0} days`,
+      value: `${currentStreak} days`,
       icon: Flame,
       color: 'bg-orange-500',
     },
     {
       label: 'Best Day',
-      value: stats.best_day_steps?.toLocaleString() || '0',
-      subtext: stats.best_day_date ? parseLocalDate(stats.best_day_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null,
+      value: bestDaySteps.toLocaleString(),
+      subtext: bestDayDate ? parseLocalDate(bestDayDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null,
       icon: Trophy,
       color: 'bg-amber-500',
     },
     {
       label: 'Goals Met',
-      value: `${stats.days_goal_met || 0}`,
-      subtext: stats.goal_met_percentage ? `${stats.goal_met_percentage}%` : null,
+      value: `${daysGoalMet}`,
+      subtext: goalMetPercentage ? `${goalMetPercentage}%` : null,
       icon: Target,
       color: 'bg-emerald-500',
     },
