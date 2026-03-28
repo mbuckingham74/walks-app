@@ -4,11 +4,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DEPLOY_HOST="${DEPLOY_HOST:-tachyon}"
+DEPLOY_HOST="${DEPLOY_HOST:-michael@100.115.127.119}"
 DEPLOY_PATH="${DEPLOY_PATH:-~/walks-tracker}"
 REMOTE_FRONTEND_URL="${REMOTE_FRONTEND_URL:-http://localhost:3080/}"
 REMOTE_API_HEALTH_URL="${REMOTE_API_HEALTH_URL:-http://localhost:3080/api/health}"
 DOCKER_PRUNE_UNTIL="${DOCKER_PRUNE_UNTIL:-24h}"
+NO_CACHE=0
+SSH_OPTS=(
+  "-o" "BatchMode=yes"
+  "-o" "ConnectTimeout=10"
+  "-o" "ServerAliveInterval=5"
+  "-o" "ServerAliveCountMax=3"
+  "-o" "StrictHostKeyChecking=accept-new"
+)
 
 RSYNC_EXCLUDES=(
   "--exclude=.git"
@@ -26,6 +34,44 @@ log() {
   printf '\n[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
 }
 
+usage() {
+  cat <<'EOF'
+Usage: ./deploy.sh [--no-cache] [--host <user@host>] [--path <remote-path>]
+
+Options:
+  --no-cache         Rebuild Docker images without using cache
+  --host <user@host> Override the SSH host target
+  --path <path>      Override the remote deploy path
+  --help             Show this help text
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-cache)
+      NO_CACHE=1
+      shift
+      ;;
+    --host)
+      DEPLOY_HOST="$2"
+      shift 2
+      ;;
+    --path)
+      DEPLOY_PATH="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
 remote_sync_path() {
   case "$DEPLOY_PATH" in
     /*|~*)
@@ -41,13 +87,14 @@ wait_for_remote() {
   local description="$1"
   shift
   log "$description"
-  ssh "$DEPLOY_HOST" bash -s -- "$@" <<'REMOTE'
+  ssh "${SSH_OPTS[@]}" "$DEPLOY_HOST" bash -s -- "$@" <<'REMOTE'
 set -euo pipefail
 
 raw_deploy_path="$1"
 frontend_url="$2"
 api_health_url="$3"
 prune_until="$4"
+no_cache="$5"
 
 expand_path() {
   case "$1" in
@@ -126,7 +173,12 @@ wait_for_http() {
 
 cd "$deploy_path/docker"
 
-docker compose up -d --build --remove-orphans
+if [[ "$no_cache" == "1" ]]; then
+  docker compose build --no-cache
+  docker compose up -d --remove-orphans
+else
+  docker compose up -d --build --remove-orphans
+fi
 
 wait_for_state "walks-mysql" "healthy" 120
 wait_for_state "walks-api" "healthy" 120
@@ -142,7 +194,7 @@ REMOTE
 }
 
 log "Ensuring remote path exists on ${DEPLOY_HOST}:${DEPLOY_PATH}"
-ssh "$DEPLOY_HOST" bash -s -- "$DEPLOY_PATH" <<'REMOTE'
+ssh "${SSH_OPTS[@]}" "$DEPLOY_HOST" bash -s -- "$DEPLOY_PATH" <<'REMOTE'
 set -euo pipefail
 
 raw_deploy_path="$1"
@@ -162,13 +214,14 @@ mkdir -p "$deploy_path"
 REMOTE
 
 log "Syncing project to ${DEPLOY_HOST}:${DEPLOY_PATH}"
-rsync -avz --delete "${RSYNC_EXCLUDES[@]}" "${SCRIPT_DIR}/" "${DEPLOY_HOST}:$(remote_sync_path)/"
+rsync -avz --delete -e "ssh ${SSH_OPTS[*]}" "${RSYNC_EXCLUDES[@]}" "${SCRIPT_DIR}/" "${DEPLOY_HOST}:$(remote_sync_path)/"
 
 wait_for_remote \
   "Deploying Docker stack and running health checks" \
   "$DEPLOY_PATH" \
   "$REMOTE_FRONTEND_URL" \
   "$REMOTE_API_HEALTH_URL" \
-  "$DOCKER_PRUNE_UNTIL"
+  "$DOCKER_PRUNE_UNTIL" \
+  "$NO_CACHE"
 
 log "Deploy complete"

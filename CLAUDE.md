@@ -9,7 +9,7 @@ Personal dashboard tracking walking progress as a virtual journey across I-90 fr
 ./deploy.sh
 ```
 
-**Server:** tachyon (ssh alias for michael@tachyonfuture.com)
+**Server:** `michael@100.115.127.119` (Tailscale SSH target)
 **Path on server:** ~/walks-tracker/
 
 `deploy.sh` handles rsync, `docker compose up -d --build --remove-orphans`, waits for health checks, and prunes old Docker builder/image layers after a successful deploy.
