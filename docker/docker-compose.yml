@@ -30,10 +30,11 @@ services:
       walks-mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
 
   walks-frontend:
     build:
@@ -47,7 +48,14 @@ services:
       - walks-network
       - npm_network
     depends_on:
-      - walks-api
+      walks-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/api/health >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   walks-mysql-data:

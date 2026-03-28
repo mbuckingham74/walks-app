@@ -47,11 +47,10 @@ cp .env.example .env
 ### 2. Production Deployment
 
 ```bash
-cd docker
-docker compose up -d --build
+./deploy.sh
 ```
 
-The frontend runs on port 3080 by default. Configure your reverse proxy (nginx, Traefik, etc.) to route traffic.
+The deploy script syncs the repo to your server, rebuilds the Docker stack, runs basic health checks, and prunes old Docker builder/image layers. The frontend runs on port 3080 by default. Configure your reverse proxy (nginx, Traefik, etc.) to route traffic.
 
 ### 3. Development
 

@@ -6,15 +6,13 @@ Personal dashboard tracking walking progress as a virtual journey across I-90 fr
 
 **Deploy from local, not GitHub pull on server:**
 ```bash
-# Rsync to server
-rsync -avz --delete --exclude '.git' --exclude 'node_modules' --exclude '__pycache__' --exclude '.env' --exclude 'venv' /Users/michaelbuckingham/Documents/my-apps/walking-app/walks-app/ tachyon:~/walks-tracker/
-
-# Rebuild containers
-ssh tachyon "cd ~/walks-tracker/docker && docker compose up -d --build"
+./deploy.sh
 ```
 
 **Server:** tachyon (ssh alias for michael@tachyonfuture.com)
 **Path on server:** ~/walks-tracker/
+
+`deploy.sh` handles rsync, `docker compose up -d --build --remove-orphans`, waits for health checks, and prunes old Docker builder/image layers after a successful deploy.
 
 ## Architecture
 
