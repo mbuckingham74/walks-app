@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     api_key: SecretStr = SecretStr("")  # Required for mutating endpoints
 
     # Business constants
-    steps_per_mile: int = 2000
+    steps_per_mile: int = 1850
     daily_goal: int = 15000
 
     @property

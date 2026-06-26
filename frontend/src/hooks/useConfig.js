@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 
 const DEFAULT_CONFIG = {
-  steps_per_mile: 2000,
+  steps_per_mile: 1850,
   daily_goal: 15000,
 };
 

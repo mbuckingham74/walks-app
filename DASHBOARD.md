@@ -8,7 +8,7 @@ The top section displays 8 stat tiles:
 
 | Stat | Description |
 |------|-------------|
-| **Total Distance** | Cumulative miles walked (steps ÷ 2000) |
+| **Total Distance** | Cumulative miles walked (steps ÷ 1850) |
 | **Total Steps** | Sum of all recorded daily steps |
 | **Daily Average** | Average steps per day across all tracked days |
 | **Current Streak** | Consecutive days meeting the 10,000 step goal |

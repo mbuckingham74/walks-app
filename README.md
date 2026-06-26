@@ -31,7 +31,7 @@ A personal dashboard to visualize steps and walking progress as a virtual journe
 Apple Health → iOS Shortcut → POST /api/steps → MySQL → Dashboard
 ```
 
-Steps are converted to miles at a rate of **2,000 steps = 1 mile**. Daily goal is **15,000 steps**.
+Steps are converted to miles at a rate of **1,850 steps = 1 mile**. Daily goal is **15,000 steps**.
 
 ## Setup
 

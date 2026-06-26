@@ -31,7 +31,7 @@ Personal dashboard tracking walking progress as a virtual journey across I-90 fr
 
 ## Business Logic
 
-- **Conversion:** 2000 steps = 1 mile (configurable via STEPS_PER_MILE env var)
+- **Conversion:** 1850 steps = 1 mile (configurable via STEPS_PER_MILE env var)
 - **Daily goal:** 15000 steps (configurable via DAILY_GOAL env var)
 - **Route:** 2850 miles, 34 waypoints across 11 states
 - **Data source:** iOS Shortcut posts to the public `POST /api/steps` endpoint
