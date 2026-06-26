@@ -18,7 +18,10 @@ engine = create_async_engine(
     max_overflow=10,
     pool_timeout=30,
     pool_recycle=1800,  # Recycle connections every 30 minutes
-    pool_pre_ping=True,  # Test connections before using them
+    # aiomysql's async ping signature is currently incompatible with
+    # SQLAlchemy's pre-ping path in the versions this app deploys with.
+    # Keep recycling enabled to avoid stale long-lived connections.
+    pool_pre_ping=False,
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
