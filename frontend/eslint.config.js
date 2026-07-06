@@ -22,7 +22,6 @@ export default [
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      'react/no-unused-vars': 'warn',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },

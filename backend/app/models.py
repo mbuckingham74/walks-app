@@ -48,3 +48,15 @@ class StatsCache(Base):
     data_hash = Column(String(64), nullable=False)  # Hash of underlying data for invalidation
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class DetailedStatsCache(Base):
+    """Cache for the detailed Stats page response."""
+    __tablename__ = "detailed_stats_cache"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    year = Column(Integer, unique=True, nullable=False)
+    stats_json = Column(Text, nullable=False)
+    data_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

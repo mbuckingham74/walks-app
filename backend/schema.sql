@@ -55,3 +55,13 @@ CREATE TABLE IF NOT EXISTS stats_cache (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Detailed stats cache table: Stats page response caching with data-based invalidation
+CREATE TABLE IF NOT EXISTS detailed_stats_cache (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    year INT UNIQUE NOT NULL,
+    stats_json TEXT NOT NULL,
+    data_hash VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

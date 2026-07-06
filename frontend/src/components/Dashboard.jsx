@@ -9,7 +9,7 @@ import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
 import { ProgressCard } from './ProgressCard';
 import { ROUTE_CONFIG } from '../config';
-import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight, AlertCircle } from 'lucide-react';
+import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight, AlertCircle, BarChart3 } from 'lucide-react';
 
 export function Dashboard() {
   const currentYear = new Date().getFullYear();
@@ -42,17 +42,33 @@ export function Dashboard() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">{ROUTE_CONFIG.name}</p>
               </div>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 cursor-pointer"
-              aria-label="Toggle dark mode"
-            >
-              {isDark ? (
-                <Sun className="w-5 h-5 text-amber-500" />
-              ) : (
-                <Moon className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/stats"
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 transition-colors duration-200"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Stats
+              </Link>
+              <Link
+                to="/stats"
+                className="sm:hidden p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+                aria-label="Stats"
+              >
+                <BarChart3 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </Link>
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 cursor-pointer"
+                aria-label="Toggle dark mode"
+              >
+                {isDark ? (
+                  <Sun className="w-5 h-5 text-amber-500" />
+                ) : (
+                  <Moon className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>

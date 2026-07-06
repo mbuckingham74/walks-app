@@ -23,6 +23,7 @@ from app.schemas import (
     StepsInput, StepsResponse
 )
 from app.route import get_route_waypoints, calculate_position, TOTAL_ROUTE_DISTANCE
+from app.detailed_stats import get_detailed_stats as detailed_stats_handler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -429,6 +430,16 @@ async def get_stats(
     await db.commit()
 
     return stats
+
+
+@app.get("/api/detailed-stats")
+@retry_on_connection_error(max_retries=1)
+async def get_detailed_stats(
+    year: Optional[int] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get detailed leaderboard statistics for the Stats page."""
+    return await detailed_stats_handler(year=year, db=db)
 
 
 @app.get("/api/steps", response_model=list[DailyStepsSchema])

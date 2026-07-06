@@ -41,6 +41,9 @@ export const api = {
   // Stats
   getStats: (year, { signal } = {}) => fetchAPI(year ? `/stats?year=${year}` : '/stats', { signal }),
 
+  // Detailed stats
+  getDetailedStats: (year, { signal } = {}) => fetchAPI(year ? `/detailed-stats?year=${year}` : '/detailed-stats', { signal }),
+
   // Steps
   getSteps: (start, end, { signal } = {}) => {
     const params = new URLSearchParams();
