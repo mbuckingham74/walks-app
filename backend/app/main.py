@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 
 from app.config import get_settings, Settings
-from app.database import get_db, init_db, dispose_engine, init_engine
+from app.database import get_db, init_db, dispose_engine, init_engine, retry_on_connection_error
 from app.models import Activity, DailySteps, StatsCache
 from app.schemas import (
     ActivitySchema, DailyStepsSchema,
@@ -383,6 +383,7 @@ async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: d
 
 
 @app.get("/api/stats")
+@retry_on_connection_error(max_retries=1)
 async def get_stats(
     year: Optional[int] = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -431,6 +432,7 @@ async def get_stats(
 
 
 @app.get("/api/steps", response_model=list[DailyStepsSchema])
+@retry_on_connection_error(max_retries=1)
 async def get_steps(
     start: Optional[date] = Query(default=None),
     end: Optional[date] = Query(default=None),
@@ -453,6 +455,7 @@ async def get_steps(
 
 
 @app.post("/api/steps", response_model=StepsResponse)
+@retry_on_connection_error(max_retries=1)
 async def upsert_steps(
     data: StepsInput,
     db: AsyncSession = Depends(get_db),
@@ -484,6 +487,7 @@ async def upsert_steps(
 
 
 @app.get("/api/activities", response_model=list[ActivitySchema])
+@retry_on_connection_error(max_retries=1)
 async def get_activities(
     year: Optional[int] = Query(default=None),
     limit: int = Query(default=50, le=500),

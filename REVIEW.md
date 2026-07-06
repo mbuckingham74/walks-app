@@ -104,7 +104,7 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - No tests exist for backend or frontend
   - Action: Add pytest tests for at minimum: route calculation (`route.py`), stats computation, schema validation, and API endpoint smoke tests. Add a `tests/` directory and a CI config.
 
-- [ ] **18. Enable `pool_pre_ping` or add connection retry logic**
+- [x] **18. Enable `pool_pre_ping` or add connection retry logic**
   - File: `walks-app/backend/app/database.py:24`
   - `pool_pre_ping=False` means stale MySQL connections cause 500 errors instead of being recycled
   - Action: Investigate aiomysql compatibility with pre_ping. If truly incompatible, add a retry decorator on DB operations that catches `OperationalError` and retries once.
