@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     # App
     debug: bool = False
     cors_origins: str = "http://localhost:5173"
-    api_key: SecretStr = SecretStr("")  # Required for mutating endpoints
+    api_key: SecretStr = SecretStr("")  # Required for /api/activities
+    shortcut_secret: SecretStr = SecretStr("")  # Required for POST /api/steps
 
     # Business constants
     steps_per_mile: int = 1850

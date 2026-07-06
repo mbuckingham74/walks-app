@@ -32,6 +32,7 @@ settings = get_settings()
 
 # Security scheme for OpenAPI docs (shows "Authorize" button)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+shortcut_secret_header = APIKeyHeader(name="X-Shortcut-Secret", auto_error=False)
 
 
 async def verify_api_key(
@@ -54,6 +55,28 @@ async def verify_api_key(
         raise HTTPException(
             status_code=401,
             detail="Invalid API key"
+        )
+
+
+async def verify_shortcut_secret(
+    x_shortcut_secret: Optional[str] = Depends(shortcut_secret_header),
+    settings: Settings = Depends(get_settings),
+):
+    configured_secret = settings.shortcut_secret.get_secret_value().strip()
+    if not configured_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Shortcut secret not configured"
+        )
+    if not x_shortcut_secret:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing X-Shortcut-Secret header"
+        )
+    if not secrets.compare_digest(x_shortcut_secret.strip(), configured_secret):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid shortcut secret"
         )
 
 
@@ -476,6 +499,7 @@ async def get_steps(
 async def upsert_steps(
     data: StepsInput,
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(verify_shortcut_secret),
 ):
     """
     Public upsert endpoint for the iOS Shortcut.
