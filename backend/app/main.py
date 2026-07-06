@@ -108,21 +108,23 @@ app.add_middleware(
 EST = ZoneInfo("America/New_York")
 
 
-async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings: Settings) -> str:
-    """Compute a hash of the underlying data to detect changes.
+async def _fetch_aggregates(db: AsyncSession, year: int, today: date, settings: Settings) -> dict:
+    """Fetch all aggregate data needed for hash computation and stats.
 
-    Includes factors that affect stats:
-    - Year-specific: max date, sum, count, individual daily values (for streaks)
-    - Cross-year: recent data for week comparisons, all-time totals for position
-    - Time-relative: today's date (streak/week calculations are date-relative)
+    Consolidates queries that were previously duplicated between
+    _compute_data_hash() and _compute_stats().
     """
-    # Year-specific aggregates
+    week_start = today - timedelta(days=today.weekday())
+    last_week_start = week_start - timedelta(days=7)
+    streak_window_start = today - timedelta(days=30)
+
     year_result = await db.execute(
         text("""
             SELECT
                 MAX(step_date),
                 COALESCE(SUM(steps), 0),
                 COUNT(*),
+                COALESCE(AVG(steps), 0),
                 COALESCE(MAX(steps), 0),
                 COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0),
                 (
@@ -139,9 +141,6 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings:
     )
     year_row = year_result.first()
 
-    # Get checksum of recent daily values (affects streaks - last 30 days)
-    # Using GROUP_CONCAT to create a fingerprint of per-day data
-    streak_window_start = today - timedelta(days=30)
     daily_result = await db.execute(
         text("""
             SELECT GROUP_CONCAT(CONCAT(step_date, ':', steps) ORDER BY step_date SEPARATOR ',')
@@ -152,12 +151,12 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings:
     )
     daily_fingerprint = daily_result.scalar() or ""
 
-    # All-time aggregates (for position calculation and all-time stat cards)
     all_time_result = await db.execute(
         text("""
             SELECT
                 COALESCE(SUM(steps), 0),
                 COUNT(*),
+                COALESCE(AVG(steps), 0),
                 COALESCE(MAX(steps), 0),
                 COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0),
                 (
@@ -172,33 +171,65 @@ async def _compute_data_hash(db: AsyncSession, year: int, today: date, settings:
     )
     all_time_row = all_time_result.first()
 
-    # Week comparison needs data from past 2 weeks (cross-year)
-    week_start = today - timedelta(days=today.weekday())
-    two_weeks_ago = week_start - timedelta(days=7)
     week_result = await db.execute(
-        select(func.sum(DailySteps.steps)).where(
-            DailySteps.step_date >= two_weeks_ago
-        )
+        text("""
+            SELECT
+                COALESCE(SUM(CASE WHEN step_date >= :week_start AND step_date <= :today
+                             THEN steps ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN step_date >= :last_week_start AND step_date < :week_start
+                             THEN steps ELSE 0 END), 0)
+            FROM daily_steps
+            WHERE step_date >= :last_week_start AND step_date <= :today
+        """),
+        {"week_start": week_start, "last_week_start": last_week_start, "today": today}
     )
-    recent_weeks_sum = week_result.scalar() or 0
+    week_row = week_result.first()
 
+    return {
+        "year_max_date": year_row[0],
+        "year_sum": int(year_row[1]),
+        "year_count": int(year_row[2]),
+        "year_avg": int(year_row[3]),
+        "year_max": int(year_row[4]),
+        "year_goal_met": int(year_row[5]),
+        "year_best_day_date": year_row[6],
+        "daily_fingerprint": daily_fingerprint,
+        "all_time_sum": int(all_time_row[0]),
+        "all_time_count": int(all_time_row[1]),
+        "all_time_avg": int(all_time_row[2]),
+        "all_time_max": int(all_time_row[3]),
+        "all_time_goal_met": int(all_time_row[4]),
+        "all_time_best_day_date": all_time_row[5],
+        "this_week_steps": int(week_row[0]),
+        "last_week_steps": int(week_row[1]),
+    }
+
+
+async def _compute_data_hash(aggregates: dict, today: date, settings: Settings) -> str:
+    """Compute a hash of the underlying data to detect changes.
+
+    Includes factors that affect stats:
+    - Year-specific: max date, sum, count, individual daily values (for streaks)
+    - Cross-year: recent data for week comparisons, all-time totals for position
+    - Time-relative: today's date (streak/week calculations are date-relative)
+    """
     hash_input = "|".join([
-        str(year_row[0]),  # max date for year
-        str(year_row[1]),  # sum for year
-        str(year_row[2]),  # count for year
-        str(year_row[3]),  # max steps for year
-        str(year_row[4]),  # goal-met days for year
-        str(year_row[5]),  # best day date for year
-        daily_fingerprint,  # per-day values for streak calculation
-        str(all_time_row[0]),  # all-time sum
-        str(all_time_row[1]),  # all-time count
-        str(all_time_row[2]),  # all-time max steps
-        str(all_time_row[3]),  # all-time goal-met days
-        str(all_time_row[4]),  # all-time best day date
-        str(recent_weeks_sum),  # recent weeks data
-        today.isoformat(),  # today's date
-        str(settings.steps_per_mile),  # distance conversion
-        str(settings.daily_goal),  # goal-related stats
+        str(aggregates["year_max_date"]),
+        str(aggregates["year_sum"]),
+        str(aggregates["year_count"]),
+        str(aggregates["year_max"]),
+        str(aggregates["year_goal_met"]),
+        str(aggregates["year_best_day_date"]),
+        aggregates["daily_fingerprint"],
+        str(aggregates["all_time_sum"]),
+        str(aggregates["all_time_count"]),
+        str(aggregates["all_time_max"]),
+        str(aggregates["all_time_goal_met"]),
+        str(aggregates["all_time_best_day_date"]),
+        str(aggregates["this_week_steps"] + aggregates["last_week_steps"]),
+        today.isoformat(),
+        str(settings.steps_per_mile),
+        str(settings.daily_goal),
     ])
     return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
@@ -268,92 +299,25 @@ async def _calculate_streak_sql(
     return result.scalar() or 0
 
 
-async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dict:
-    """Compute all statistics in optimized queries."""
-    today = datetime.now(EST).date()
-    week_start = today - timedelta(days=today.weekday())  # Monday
-    last_week_start = week_start - timedelta(days=7)
+async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: date, settings: Settings) -> dict:
+    """Compute all statistics using pre-fetched aggregates plus streak queries."""
+    total_steps = aggregates["year_sum"]
+    total_days = aggregates["year_count"]
+    avg_steps = aggregates["year_avg"]
+    max_steps = aggregates["year_max"]
+    best_day_date = aggregates["year_best_day_date"].isoformat() if aggregates["year_best_day_date"] else None
+    days_goal_met = aggregates["year_goal_met"]
 
-    # Single query for year-specific aggregates
-    combined_sql = text("""
-        SELECT
-            COALESCE(SUM(steps), 0) as total_steps,
-            COUNT(*) as total_days,
-            COALESCE(AVG(steps), 0) as avg_steps,
-            COALESCE(MAX(steps), 0) as max_steps,
-            (SELECT step_date FROM daily_steps
-             WHERE YEAR(step_date) = :year
-             ORDER BY steps DESC, step_date ASC LIMIT 1) as best_day_date,
-            COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0) as days_goal_met
-        FROM daily_steps
-        WHERE YEAR(step_date) = :year
-    """)
+    all_time_steps = aggregates["all_time_sum"]
+    all_time_total_days = aggregates["all_time_count"]
+    all_time_avg_steps = aggregates["all_time_avg"]
+    all_time_best_day_steps = aggregates["all_time_max"]
+    all_time_best_day_date = aggregates["all_time_best_day_date"].isoformat() if aggregates["all_time_best_day_date"] else None
+    all_time_days_goal_met = aggregates["all_time_goal_met"]
 
-    all_time_sql = text("""
-        SELECT
-            COALESCE(SUM(steps), 0) as total_steps,
-            COUNT(*) as total_days,
-            COALESCE(AVG(steps), 0) as avg_steps,
-            COALESCE(MAX(steps), 0) as max_steps,
-            (SELECT step_date FROM daily_steps
-             ORDER BY steps DESC, step_date ASC LIMIT 1) as best_day_date,
-            COALESCE(SUM(CASE WHEN steps >= :daily_goal THEN 1 ELSE 0 END), 0) as days_goal_met
-        FROM daily_steps
-    """)
+    this_week_steps = aggregates["this_week_steps"]
+    last_week_steps = aggregates["last_week_steps"]
 
-    # Separate query for week comparison (spans across years)
-    week_sql = text("""
-        SELECT
-            COALESCE(SUM(CASE WHEN step_date >= :week_start AND step_date <= :today
-                         THEN steps ELSE 0 END), 0) as this_week_steps,
-            COALESCE(SUM(CASE WHEN step_date >= :last_week_start AND step_date < :week_start
-                         THEN steps ELSE 0 END), 0) as last_week_steps
-        FROM daily_steps
-        WHERE step_date >= :last_week_start AND step_date <= :today
-    """)
-
-    result = await db.execute(
-        combined_sql,
-        {
-            "year": year,
-            "daily_goal": settings.daily_goal,
-        }
-    )
-    row = result.first()
-
-    total_steps = int(row[0])
-    total_days = int(row[1])
-    avg_steps = int(row[2])
-    max_steps = int(row[3])
-    best_day_date = row[4].isoformat() if row[4] else None
-    days_goal_met = int(row[5])
-
-    all_time_result = await db.execute(
-        all_time_sql,
-        {"daily_goal": settings.daily_goal}
-    )
-    all_time_row = all_time_result.first()
-    all_time_steps = int(all_time_row[0])
-    all_time_total_days = int(all_time_row[1])
-    all_time_avg_steps = int(all_time_row[2])
-    all_time_best_day_steps = int(all_time_row[3])
-    all_time_best_day_date = all_time_row[4].isoformat() if all_time_row[4] else None
-    all_time_days_goal_met = int(all_time_row[5])
-
-    # Get week comparison (across years)
-    week_result = await db.execute(
-        week_sql,
-        {
-            "week_start": week_start,
-            "last_week_start": last_week_start,
-            "today": today
-        }
-    )
-    week_row = week_result.first()
-    this_week_steps = int(week_row[0])
-    last_week_steps = int(week_row[1])
-
-    # Calculate streak using window function query
     current_streak = await _calculate_streak_sql(db, today, settings.daily_goal, year=year)
     all_time_current_streak = await _calculate_streak_sql(db, today, settings.daily_goal)
 
@@ -433,8 +397,8 @@ async def get_stats(
 
     today = datetime.now(EST).date()
 
-    # Check cache
-    current_hash = await _compute_data_hash(db, year, today, settings)
+    aggregates = await _fetch_aggregates(db, year, today, settings)
+    current_hash = await _compute_data_hash(aggregates, today, settings)
 
     cache_result = await db.execute(
         select(StatsCache).where(StatsCache.year == year)
@@ -447,7 +411,7 @@ async def get_stats(
 
     # Cache miss or stale - recompute
     logger.info(f"Stats cache miss for year {year}, recomputing...")
-    stats = await _compute_stats(db, year, settings)
+    stats = await _compute_stats(db, aggregates, year, today, settings)
 
     # Update cache
     stats_json = json.dumps(stats)

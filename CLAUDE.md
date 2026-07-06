@@ -53,6 +53,11 @@ cd frontend && npm run build  # Build happens in Docker, but test locally first
 cd frontend && npm install  # Regenerate package-lock.json before deploy
 ```
 
+**After changing backend dependencies:**
+```bash
+cd backend && ./compile-requirements.sh  # Regenerate requirements.lock before deploy
+```
+
 **Check logs on server:**
 ```bash
 ssh tachyon "docker logs walks-api --tail 50"

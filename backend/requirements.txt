@@ -1,3 +1,5 @@
+# Direct backend dependency constraints.
+# After editing this file, regenerate requirements.lock with ./compile-requirements.sh
 fastapi>=0.115.0
 uvicorn[standard]==0.27.1
 pydantic==2.6.1

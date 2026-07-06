@@ -59,8 +59,15 @@ The deploy script syncs the repo to your server, rebuilds the Docker stack, runs
 cd backend
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.lock
 uvicorn app.main:app --reload
+```
+
+Backend Python dependencies are deployed from the pinned `backend/requirements.lock` file. Edit `backend/requirements.txt` only for direct dependency changes, then regenerate the lock file with:
+
+```bash
+cd backend
+./compile-requirements.sh
 ```
 
 **Frontend:**
