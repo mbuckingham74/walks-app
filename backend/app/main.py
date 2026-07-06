@@ -7,10 +7,12 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
-from sqlalchemy import select, func, extract, text
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from sqlalchemy import select, extract, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 
@@ -465,6 +467,26 @@ async def get_steps(
     return result.scalars().all()
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Log request body on validation errors to help debug shortcut issues."""
+    body = await request.body()
+    safe_errors = []
+    for err in exc.errors():
+        safe_err = dict(err)
+        if "ctx" in safe_err:
+            safe_err["ctx"] = {k: str(v) for k, v in safe_err["ctx"].items()}
+        safe_errors.append(safe_err)
+    logger.warning(
+        f"Validation error for {request.method} {request.url}: "
+        f"{body.decode()!r} - {safe_errors}"
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"detail": safe_errors},
+    )
+
+
 @app.post("/api/steps", response_model=StepsResponse)
 @retry_on_connection_error(max_retries=1)
 async def upsert_steps(
@@ -474,16 +496,16 @@ async def upsert_steps(
 ):
     """
     Public upsert endpoint for the iOS Shortcut.
-    Insert if date doesn't exist, update only if new value is higher.
+    Inserts if the date doesn't exist, otherwise overwrites with the latest value.
     """
     stmt = insert(DailySteps).values(
         step_date=data.date,
         steps=data.steps,
         goal=settings.daily_goal,
     )
-    # Only update if new value is higher than existing
+    # Always overwrite with the latest posted value so the daily shortcut sync wins.
     stmt = stmt.on_duplicate_key_update(
-        steps=func.greatest(DailySteps.steps, stmt.inserted.steps),
+        steps=stmt.inserted.steps,
     )
     await db.execute(stmt)
     await db.commit()

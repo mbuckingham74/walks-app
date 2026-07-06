@@ -88,3 +88,15 @@ class TestPostStepsEndpoint:
             headers={"X-Shortcut-Secret": "test-shortcut-secret"},
         )
         assert resp.status_code == 422
+
+    def test_post_steps_with_valid_data_returns_200(self, client):
+        resp = client.post(
+            "/api/steps",
+            json={"date": "2026-01-01", "steps": 17000},
+            headers={"X-Shortcut-Secret": "test-shortcut-secret"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert data["date"] == "2026-01-01"
+        assert data["steps"] == 17000
