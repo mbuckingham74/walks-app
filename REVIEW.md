@@ -177,7 +177,7 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - `formatDate` is defined in `StepsDetail.jsx:13` and duplicated in dead code files
   - Action: Create `src/lib/dates.js` and import from a single source
 
-- [ ] **32. Fix `deploy.sh` SSH host key verification**
+- [x] **32. Fix `deploy.sh` SSH host key verification**
   - File: `walks-app/deploy.sh`
   - Uses `StrictHostKeyChecking=accept-new` which auto-accepts first host key (MITM risk)
   - Action: Pin the host key fingerprint in `known_hosts` and set `StrictHostKeyChecking=yes`

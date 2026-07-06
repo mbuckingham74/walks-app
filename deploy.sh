@@ -15,7 +15,8 @@ SSH_OPTS=(
   "-o" "ConnectTimeout=10"
   "-o" "ServerAliveInterval=5"
   "-o" "ServerAliveCountMax=3"
-  "-o" "StrictHostKeyChecking=accept-new"
+  "-o" "StrictHostKeyChecking=yes"
+  "-o" "UserKnownHostsFile=${SCRIPT_DIR}/deploy_known_hosts"
 )
 
 RSYNC_EXCLUDES=(
