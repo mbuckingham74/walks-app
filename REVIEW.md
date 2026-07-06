@@ -226,3 +226,33 @@ Reviewed: 2026-07-06
   - File: `walks-app/docker/docker-compose.yml`
   - Frontend healthcheck probes `/api/health` which depends on backend being up
   - Action: Change to probe `/` (static content) so frontend health is independent of backend
+
+---
+
+## Dependency Updates — 2026-07-06
+
+### Frontend (npm)
+
+**Updated (safe minor/patch versions):**
+- `autoprefixer`: ^10.4.17 → ^10.5.2
+- `postcss`: ^8.4.35 → ^8.5.16
+- `vite`: ^6.0.0 → ^6.4.3
+- `react-router-dom`: 7.10.1 → ^7.18.1 (now uses caret range within v7)
+
+**Deferred (major version bumps — risk of breaking changes):**
+- `@eslint/js`: 9.x → 10.x
+- `@vitejs/plugin-react`: 4.x → 6.x
+- `eslint`: 9.x → 10.x
+- `eslint-plugin-react-hooks`: 5.x → 7.x
+- `lucide-react`: 0.330.0 → 1.23.0 (intentionally pinned in #29)
+- `react` + `react-dom`: 18.x → 19.x
+- `react-leaflet`: 4.x → 5.x
+- `recharts`: 2.x → 3.x
+- `tailwindcss`: 3.x → 4.x
+
+**Rationale**: Major version bumps carry risk of breaking changes. The app is stable and functional. Updates can be evaluated individually when time permits for testing.
+
+### Backend (Python)
+
+**No changes made.** Backend dependencies use flexible version constraints (`>=`) that allow updates when `requirements.lock` is regenerated. Pinned versions (`==`) are stable and working.
+
