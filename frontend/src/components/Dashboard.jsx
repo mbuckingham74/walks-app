@@ -9,21 +9,21 @@ import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
 import { ProgressCard } from './ProgressCard';
 import { ROUTE_CONFIG } from '../config';
-import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
+import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight, AlertCircle } from 'lucide-react';
 
 export function Dashboard() {
   const currentYear = new Date().getFullYear();
   const previousYear = currentYear - 1;
 
-  const { stats, loading: statsLoading } = useStats(currentYear);
-  const { stats: previousYearStats, loading: previousYearLoading } = useStats(previousYear);
-  // Load all available history without requiring a separate metadata endpoint.
-  const { steps, loading: stepsLoading } = useSteps('2000-01-01', `${currentYear}-12-31`);
-  const { route, loading: routeLoading } = useRoute();
-  const { config, loading: configLoading } = useConfig();
+  const { stats, loading: statsLoading, error: statsError } = useStats(currentYear);
+  const { stats: previousYearStats, loading: previousYearLoading, error: previousYearError } = useStats(previousYear);
+  const { steps, loading: stepsLoading, error: stepsError } = useSteps(`${currentYear}-01-01`, `${currentYear}-12-31`);
+  const { route, loading: routeLoading, error: routeError } = useRoute();
+  const { config, loading: configLoading, error: configError } = useConfig();
   const { isDark, toggle: toggleTheme } = useTheme();
 
   const isLoading = statsLoading || previousYearLoading || stepsLoading || routeLoading || configLoading;
+  const errors = [statsError, previousYearError, stepsError, routeError, configError].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -68,6 +68,21 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="space-y-6">
+            {errors.length > 0 && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+                      Unable to load some data
+                    </h3>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                      Some data could not be retrieved. The dashboard may show incomplete information.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Stats cards */}
             <StatsCards stats={stats} />
 
