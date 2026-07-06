@@ -2,7 +2,10 @@
 
 Reviewed: 2026-07-06
 
-Check off items as they are completed. Each item is self-contained enough to be addressed in a separate context window.
+## Status Legend
+- [x] Completed
+- [-] Intentionally deferred (with rationale)
+- [ ] Not yet addressed
 
 ---
 
@@ -182,25 +185,28 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - Uses `StrictHostKeyChecking=accept-new` which auto-accepts first host key (MITM risk)
   - Action: Pin the host key fingerprint in `known_hosts` and set `StrictHostKeyChecking=yes`
 
-- [ ] **33. Add Docker container hardening**
+- [-] **33. Add Docker container hardening** (deferred)
   - File: `walks-app/docker/docker-compose.yml`
   - No `read_only`, `mem_limit`, `security_opt`, or `cap_drop` on any service
   - Action: Add `read_only: true` with tmpfs mounts, `security_opt: ["no-new-privileges:true"]`, `cap_drop: ["ALL"]`, and resource limits
+  - **Rationale**: Personal vanity site with single user. Risk of breaking MySQL writes or API temp directories outweighs security benefit.
 
-- [ ] **34. Run frontend nginx as non-root**
+- [-] **34. Run frontend nginx as non-root** (deferred)
   - File: `walks-app/frontend/Dockerfile`
   - Backend correctly uses non-root user; frontend nginx runs as root
   - Action: Configure nginx to run on a high port with non-root user (requires custom nginx config)
+  - **Rationale**: Personal vanity site with single user. Requires custom nginx config and could break current setup. Not worth the complexity.
 
 - [x] **35. Add CSP header to static asset nginx location block**
   - File: `walks-app/frontend/nginx.conf:54-62`
   - Static asset block re-adds most security headers but omits `Content-Security-Policy`
   - Action: Add `add_header Content-Security-Policy "..." always;` to the static asset block
 
-- [ ] **36. Externalize Matomo analytics site ID**
+- [-] **36. Externalize Matomo analytics site ID** (deferred)
   - File: `walks-app/frontend/index.html:20`
   - Site ID `12` and tracker URL hardcoded
   - Action: Inject via environment variable or nginx `sub_filter` at deploy time
+  - **Rationale**: Personal vanity site with single user. Hardcoded values work fine for this use case.
 
 - [x] **37. Fix `.env` comment about `API_KEY` usage**
   - File: `walks-app/.env`
