@@ -53,24 +53,6 @@ class RouteSchema(BaseModel):
     waypoints: list[WaypointSchema]
 
 
-class PositionSchema(BaseModel):
-    lat: float
-    lon: float
-    miles_traveled: float
-    current_waypoint: WaypointSchema
-    next_waypoint: Optional[WaypointSchema]
-    miles_to_next: float
-    percent_complete: float
-
-
-class StatsSchema(BaseModel):
-    year: int
-    total_distance_miles: float
-    total_walks: int
-    crossings_completed: int
-    current_position: PositionSchema
-
-
 class StepsInput(BaseModel):
     date: date
     steps: int

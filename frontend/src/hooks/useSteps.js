@@ -1,61 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useMemo } from 'react';
+import { useFetch } from './useFetch';
 import { api } from '../lib/api';
 
 export function useSteps(startDate = null, endDate = null) {
-  const [steps, setSteps] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const abortControllerRef = useRef(null);
+  const fetchFn = useMemo(() => ({ signal }) => api.getSteps(startDate, endDate, { signal }), [startDate, endDate]);
+  const { data: steps, loading, error, refetch } = useFetch(fetchFn, [startDate, endDate]);
 
-  useEffect(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
-    const { signal } = abortControllerRef.current;
-
-    async function fetchSteps() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await api.getSteps(startDate, endDate, { signal });
-        setSteps(data);
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          setError(err.message);
-        }
-      } finally {
-        if (!signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchSteps();
-
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, [startDate, endDate]);
-
-  const refetch = useCallback(async () => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
-    const { signal } = abortControllerRef.current;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await api.getSteps(startDate, endDate, { signal });
-      setSteps(data);
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        setError(err.message);
-      }
-    } finally {
-      if (!signal.aborted) {
-        setLoading(false);
-      }
-    }
-  }, [startDate, endDate]);
-
-  return { steps, loading, error, refetch };
+  return { steps: steps || [], loading, error, refetch };
 }

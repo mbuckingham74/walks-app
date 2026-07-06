@@ -11,9 +11,9 @@ The top section displays 8 stat tiles:
 | **Total Distance** | Cumulative miles walked (steps ÷ 1850) |
 | **Total Steps** | Sum of all recorded daily steps |
 | **Daily Average** | Average steps per day across all tracked days |
-| **Current Streak** | Consecutive days meeting the 10,000 step goal |
+| **Current Streak** | Consecutive days meeting the 15,000 step goal |
 | **Best Day** | Highest single-day step count with date |
-| **Goals Met** | Number of days reaching 10,000+ steps (with percentage) |
+| **Goals Met** | Number of days reaching 15,000+ steps (with percentage) |
 | **Progress** | Percentage of the Seattle-to-Boston route completed |
 | **ETA Boston** | Projected arrival date based on current pace |
 
@@ -54,7 +54,7 @@ An area chart with time range filters:
 
 The chart displays:
 - Daily step counts as a filled area
-- 10,000 step goal as a dashed reference line
+- 15,000 step goal as a dashed reference line
 - Tooltips with exact values on hover
 
 ## Data Source

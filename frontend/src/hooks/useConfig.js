@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
+import { useFetch } from './useFetch';
 import { api } from '../lib/api';
 
 const DEFAULT_CONFIG = {
@@ -7,40 +8,8 @@ const DEFAULT_CONFIG = {
 };
 
 export function useConfig() {
-  const [config, setConfig] = useState(DEFAULT_CONFIG);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const abortControllerRef = useRef(null);
+  const fetchFn = useMemo(() => ({ signal }) => api.getConfig({ signal }), []);
+  const { data: config, loading, error } = useFetch(fetchFn, []);
 
-  useEffect(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
-    const { signal } = abortControllerRef.current;
-
-    async function fetchConfig() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await api.getConfig({ signal });
-        setConfig(data);
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          setError(err.message);
-          // Keep default config on error
-        }
-      } finally {
-        if (!signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchConfig();
-
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
-
-  return { config, loading, error };
+  return { config: config || DEFAULT_CONFIG, loading, error };
 }

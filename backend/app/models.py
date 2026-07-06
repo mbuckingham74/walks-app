@@ -32,23 +32,10 @@ class DailySteps(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     step_date = Column(Date, unique=True, nullable=False)
     steps = Column(Integer, default=0)
-    goal = Column(Integer, default=10000)
+    goal = Column(Integer, default=15000)
     distance_miles = Column(DECIMAL(10, 2))
     floors_climbed = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
-
-
-class RouteProgress(Base):
-    __tablename__ = "route_progress"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    year = Column(Integer, unique=True, nullable=False)
-    total_distance_miles = Column(DECIMAL(10, 2), default=0)
-    total_walks = Column(Integer, default=0)
-    current_waypoint_index = Column(Integer, default=0)
-    current_lat = Column(DECIMAL(10, 7))
-    current_lon = Column(DECIMAL(10, 7))
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class StatsCache(Base):

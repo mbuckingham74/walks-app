@@ -4,7 +4,6 @@ import logging
 import secrets
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
-from decimal import Decimal
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -16,11 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert
 
 from app.config import get_settings, Settings
-from app.database import get_db, init_db
-from app.models import Activity, DailySteps, RouteProgress, StatsCache
+from app.database import get_db, init_db, dispose_engine, init_engine
+from app.models import Activity, DailySteps, StatsCache
 from app.schemas import (
     ActivitySchema, DailyStepsSchema,
-    RouteSchema, WaypointSchema, StatsSchema, PositionSchema,
+    RouteSchema, WaypointSchema,
     StepsInput, StepsResponse
 )
 from app.route import get_route_waypoints, calculate_position, TOTAL_ROUTE_DISTANCE
@@ -82,8 +81,10 @@ async def verify_shortcut_secret(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_engine()
     await init_db()
     yield
+    await dispose_engine()
 
 
 app = FastAPI(
@@ -98,7 +99,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins_list,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "X-API-Key"],
+    allow_headers=["Content-Type", "X-API-Key", "X-Shortcut-Secret"],
 )
 
 
@@ -265,14 +266,6 @@ async def _calculate_streak_sql(
 
     result = await db.execute(streak_sql, params)
     return result.scalar() or 0
-
-
-async def _get_all_time_steps(db: AsyncSession) -> int:
-    """Get total steps across all years."""
-    result = await db.execute(
-        select(func.coalesce(func.sum(DailySteps.steps), 0))
-    )
-    return int(result.scalar())
 
 
 async def _compute_stats(db: AsyncSession, year: int, settings: Settings) -> dict:
@@ -576,4 +569,4 @@ async def get_config():
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(EST).isoformat()}

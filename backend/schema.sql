@@ -20,8 +20,7 @@ CREATE TABLE IF NOT EXISTS activities (
     calories INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_activity_date (activity_date),
-    INDEX idx_activity_year (activity_date)
+    INDEX idx_activity_date (activity_date)
 );
 
 -- Daily steps table: Daily step totals
@@ -29,11 +28,10 @@ CREATE TABLE IF NOT EXISTS daily_steps (
     id INT AUTO_INCREMENT PRIMARY KEY,
     step_date DATE UNIQUE NOT NULL,
     steps INT DEFAULT 0,
-    goal INT DEFAULT 10000,
+    goal INT DEFAULT 15000,
     distance_miles DECIMAL(10, 2),
     floors_climbed INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_step_date (step_date)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Route progress table: Cached progress calculation
@@ -45,8 +43,7 @@ CREATE TABLE IF NOT EXISTS route_progress (
     current_waypoint_index INT DEFAULT 0,
     current_lat DECIMAL(10, 7),
     current_lon DECIMAL(10, 7),
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_progress_year (year)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Stats cache table: Full stats response caching with data-based invalidation
@@ -56,6 +53,5 @@ CREATE TABLE IF NOT EXISTS stats_cache (
     stats_json TEXT NOT NULL,
     data_hash VARCHAR(64) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_stats_year (year)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

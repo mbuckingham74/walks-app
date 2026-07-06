@@ -118,13 +118,44 @@ export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GO
           month: 'short',
           day: 'numeric',
         }),
+        dateKey,
         steps: data?.steps ?? 0,
         goal: data?.goal ?? dailyGoal,
       });
       current.setDate(current.getDate() + 1);
     }
 
-    return result;
+    // Downsample if "All" range and too many points
+    if (range === null && result.length > 365) {
+      // Aggregate by month
+      const monthlyData = new Map();
+      result.forEach(d => {
+        const date = new Date(d.dateKey + 'T00:00:00');
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthlyData.has(monthKey)) {
+          monthlyData.set(monthKey, { steps: 0, goal: 0, count: 0, monthKey });
+        }
+        const entry = monthlyData.get(monthKey);
+        entry.steps += d.steps;
+        entry.goal += d.goal;
+        entry.count += 1;
+      });
+
+      return Array.from(monthlyData.values())
+        .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+        .map(entry => {
+          const [year, month] = entry.monthKey.split('-');
+          const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+          return {
+            date: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+            steps: Math.round(entry.steps / entry.count),
+            goal: Math.round(entry.goal / entry.count),
+          };
+        });
+    }
+
+    // Remove dateKey from result before returning
+    return result.map(({ dateKey, ...rest }) => rest);
   }, [steps, range, dailyGoal]);
 
   const avgGoal = useMemo(() => {
