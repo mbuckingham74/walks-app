@@ -1,11 +1,5 @@
 import { MapPin, Footprints, Trophy, Navigation, TrendingUp, Flame, Target, Calendar } from 'lucide-react';
-
-// Parse ISO date string as local time (not UTC) to avoid timezone shift
-function parseLocalDate(dateStr) {
-  if (!dateStr) return null;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
+import { parseLocalDate } from '../lib/dates';
 
 export function StatsCards({ stats }) {
   if (!stats) return null;

@@ -143,11 +143,11 @@ Check off items as they are completed. Each item is self-contained enough to be 
 
 ## LOW — Minor Issues
 
-- [ ] **25. Remove unused imports in `main.py`**
+- [x] **25. Remove unused imports in `main.py`**
   - File: `walks-app/backend/app/main.py`
   - `Decimal` (line 7), `text` (line 14 — if f-string pattern is removed), `RouteProgress` (line 20) are unused
 
-- [ ] **26. Remove unnecessary TypeScript devDependencies**
+- [x] **26. Remove unnecessary TypeScript devDependencies**
   - File: `walks-app/frontend/package.json`
   - `@types/react` and `@types/react-dom` are listed but the project uses plain `.jsx`/`.js`
 
@@ -156,12 +156,12 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - No linter or formatter config exists. Code style consistency relies on developer discipline.
   - Action: Add `.eslintrc.cjs` and `.prettierrc` with sensible defaults for React + JSX
 
-- [ ] **28. Add `jsconfig.json` for IDE support**
+- [x] **28. Add `jsconfig.json` for IDE support**
   - File: `walks-app/frontend/` (missing)
   - Without it, IDE features like "Go to Definition" and import auto-complete may not work
   - Action: Add `jsconfig.json` with `"baseUrl": "./src"` and path aliases
 
-- [ ] **29. Pin `lucide-react` and `react-router-dom` to stable versions**
+- [x] **29. Pin `lucide-react` and `react-router-dom` to stable versions**
   - File: `walks-app/frontend/package.json`
   - `lucide-react@^0.330.0` is pre-1.0 (breaking changes in minor bumps)
   - `react-router-dom@^7.10.1` caret range could pull in breaking changes
@@ -172,7 +172,7 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - Chart stroke/gradient colors hardcoded to `#16a34a`
   - Action: Read colors from CSS custom properties or Tailwind config
 
-- [ ] **31. Extract duplicated utility functions**
+- [x] **31. Extract duplicated utility functions**
   - `parseLocalDate` is defined independently in `StatsCards.jsx:4` and `StepsDetail.jsx:8`
   - `formatDate` is defined in `StepsDetail.jsx:13` and duplicated in dead code files
   - Action: Create `src/lib/dates.js` and import from a single source
@@ -192,7 +192,7 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - Backend correctly uses non-root user; frontend nginx runs as root
   - Action: Configure nginx to run on a high port with non-root user (requires custom nginx config)
 
-- [ ] **35. Add CSP header to static asset nginx location block**
+- [x] **35. Add CSP header to static asset nginx location block**
   - File: `walks-app/frontend/nginx.conf:54-62`
   - Static asset block re-adds most security headers but omits `Content-Security-Policy`
   - Action: Add `add_header Content-Security-Policy "..." always;` to the static asset block
@@ -202,21 +202,21 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - Site ID `12` and tracker URL hardcoded
   - Action: Inject via environment variable or nginx `sub_filter` at deploy time
 
-- [ ] **37. Fix `.env` comment about `API_KEY` usage**
+- [x] **37. Fix `.env` comment about `API_KEY` usage**
   - File: `walks-app/.env`
   - Comment says "required for POST /api/steps and /api/sync* endpoints" but `POST /api/steps` is currently public
   - Action: Update comment to accurately reflect which endpoints use the key
 
-- [ ] **38. Add `STEPS_PER_MILE` to production `.env`**
+- [x] **38. Add `STEPS_PER_MILE` to production `.env`**
   - File: `walks-app/.env`
   - Present in `.env.example` but missing from `.env`. App falls back to default, but should be explicit.
 
-- [ ] **39. Add `client_max_body_size` to nginx configs**
+- [x] **39. Add `client_max_body_size` to nginx configs**
   - Files: `walks-app/frontend/nginx.conf`, `walks-app/docker/nginx.conf`
   - No explicit body size limit. Nginx default is 1MB, but should be explicitly set for the public write endpoint.
   - Action: Add `client_max_body_size 1m;` to the server block
 
-- [ ] **40. Decouple frontend healthcheck from backend**
+- [x] **40. Decouple frontend healthcheck from backend**
   - File: `walks-app/docker/docker-compose.yml`
   - Frontend healthcheck probes `/api/health` which depends on backend being up
   - Action: Change to probe `/` (static content) so frontend health is independent of backend

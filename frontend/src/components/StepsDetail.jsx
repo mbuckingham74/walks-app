@@ -4,19 +4,7 @@ import { useConfig } from '../hooks/useConfig';
 import { useSteps } from '../hooks/useSteps';
 import { useTheme } from '../hooks/useTheme';
 import { ArrowLeft, Sun, Moon, Activity, Calendar, Footprints, MapPin } from 'lucide-react';
-
-function parseLocalDate(dateStr) {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function formatDate(dateStr) {
-  return parseLocalDate(dateStr).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+import { parseLocalDate, formatDate } from '../lib/dates';
 
 export function StepsDetail() {
   const { year: yearParam } = useParams();
