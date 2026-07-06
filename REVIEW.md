@@ -100,7 +100,7 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - `get_settings()` and `create_async_engine()` run at import time, before the lifespan handler
   - Action: Move engine creation into an `init_engine()` function called from the lifespan. This makes testing easier and errors occur during controlled startup.
 
-- [ ] **17. Add basic test suite**
+- [x] **17. Add basic test suite**
   - No tests exist for backend or frontend
   - Action: Add pytest tests for at minimum: route calculation (`route.py`), stats computation, schema validation, and API endpoint smoke tests. Add a `tests/` directory and a CI config.
 
