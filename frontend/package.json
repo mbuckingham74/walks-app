@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src/",
+    "format": "prettier --write src/"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -18,9 +20,14 @@
     "recharts": "^2.12.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react": "^7.34.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
     "postcss": "^8.4.35",
+    "prettier": "^3.2.0",
     "tailwindcss": "^3.4.1",
     "vite": "^6.0.0"
   }

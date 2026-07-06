@@ -45,8 +45,9 @@ function CustomTooltip({ active, payload, label, dailyGoal }) {
 export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GOAL }) {
   const [range, setRange] = useState(30);
 
-  // Theme-aware colors for Recharts
+  // Theme-aware colors for Recharts (aligned with Tailwind primary palette)
   const chartColors = {
+    primary: '#16a34a',
     grid: isDark ? '#374151' : '#e5e7eb',
     axis: isDark ? '#9ca3af' : '#6b7280',
     reference: isDark ? '#6b7280' : '#9ca3af',
@@ -197,8 +198,8 @@ export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GO
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="stepsGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#16a34a" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
+                <stop offset="5%" stopColor={chartColors.primary} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={chartColors.primary} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
@@ -229,7 +230,7 @@ export function StepsChart({ steps, isDark = false, dailyGoal = DEFAULT_DAILY_GO
             <Area
               type="monotone"
               dataKey="steps"
-              stroke="#16a34a"
+              stroke={chartColors.primary}
               strokeWidth={2}
               fill="url(#stepsGradient)"
             />

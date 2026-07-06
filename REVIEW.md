@@ -151,7 +151,7 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - File: `walks-app/frontend/package.json`
   - `@types/react` and `@types/react-dom` are listed but the project uses plain `.jsx`/`.js`
 
-- [ ] **27. Add ESLint and Prettier configuration**
+- [x] **27. Add ESLint and Prettier configuration**
   - File: `walks-app/frontend/` (missing)
   - No linter or formatter config exists. Code style consistency relies on developer discipline.
   - Action: Add `.eslintrc.cjs` and `.prettierrc` with sensible defaults for React + JSX
@@ -167,7 +167,7 @@ Check off items as they are completed. Each item is self-contained enough to be 
   - `react-router-dom@^7.10.1` caret range could pull in breaking changes
   - Action: Pin to exact versions or use `~` instead of `^`
 
-- [ ] **30. Use Tailwind theme colors in chart instead of hardcoded hex**
+- [x] **30. Use Tailwind theme colors in chart instead of hardcoded hex**
   - File: `walks-app/frontend/src/components/StepsChart.jsx:169-170, 198-202`
   - Chart stroke/gradient colors hardcoded to `#16a34a`
   - Action: Read colors from CSS custom properties or Tailwind config
