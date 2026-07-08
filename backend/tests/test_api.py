@@ -100,3 +100,35 @@ class TestPostStepsEndpoint:
         assert data["status"] == "ok"
         assert data["date"] == "2026-01-01"
         assert data["steps"] == 17000
+
+
+class TestLogStepsGetEndpoint:
+    def test_log_steps_get_without_secret_returns_401(self, client):
+        resp = client.get("/api/log-steps?date=2026-01-01&steps=17000")
+        assert resp.status_code == 401
+
+    def test_log_steps_get_with_wrong_secret_returns_401(self, client):
+        resp = client.get("/api/log-steps?date=2026-01-01&steps=17000&secret=wrong")
+        assert resp.status_code == 401
+
+    def test_log_steps_get_with_valid_data_returns_200(self, client):
+        resp = client.get(
+            "/api/log-steps?date=2026-01-01&steps=17000&secret=test-shortcut-secret"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert data["date"] == "2026-01-01"
+        assert data["steps"] == 17000
+
+    def test_log_steps_get_invalid_date_returns_422(self, client):
+        resp = client.get(
+            "/api/log-steps?date=not-a-date&steps=17000&secret=test-shortcut-secret"
+        )
+        assert resp.status_code == 422
+
+    def test_log_steps_get_steps_out_of_bounds_returns_422(self, client):
+        resp = client.get(
+            "/api/log-steps?date=2026-01-01&steps=999999&secret=test-shortcut-secret"
+        )
+        assert resp.status_code == 422

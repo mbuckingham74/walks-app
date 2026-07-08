@@ -519,6 +519,41 @@ async def upsert_steps(
     )
 
 
+@app.get("/api/log-steps")
+@retry_on_connection_error(max_retries=1)
+async def log_steps_get(
+    log_date: date = Query(..., alias="date"),
+    steps: int = Query(..., ge=0, le=500_000),
+    secret: str = Query(default=""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Simple GET endpoint for logging steps via URL query parameters.
+
+    Useful for Shortcuts automations that struggle with JSON body variables.
+    The secret is passed as a query param, which is acceptable for personal use
+    with a low threat model.
+    """
+    settings = get_settings()
+    configured_secret = settings.shortcut_secret.get_secret_value().strip()
+    if not configured_secret or not secrets.compare_digest(secret.strip(), configured_secret):
+        raise HTTPException(status_code=401, detail="Invalid shortcut secret")
+
+    stmt = insert(DailySteps).values(
+        step_date=log_date,
+        steps=steps,
+        goal=settings.daily_goal,
+    )
+    stmt = stmt.on_duplicate_key_update(
+        steps=stmt.inserted.steps,
+    )
+    await db.execute(stmt)
+    await db.commit()
+
+    logger.info(f"Upserted steps via GET: {log_date} -> {steps}")
+
+    return {"status": "ok", "date": log_date.isoformat(), "steps": steps}
+
+
 @app.get("/api/activities", response_model=list[ActivitySchema])
 @retry_on_connection_error(max_retries=1)
 async def get_activities(
