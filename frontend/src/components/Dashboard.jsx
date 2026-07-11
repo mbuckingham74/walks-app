@@ -204,6 +204,12 @@ export function Dashboard() {
                           {stats.miles_remaining?.toLocaleString() || 0} mi
                         </span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Steps to Boston</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {stats.steps_to_boston?.toLocaleString() || 0}
+                        </span>
+                      </div>
                       {stats.crossings_completed > 0 && (
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">America crossings</span>

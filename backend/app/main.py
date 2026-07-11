@@ -339,6 +339,7 @@ async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: d
 
     # Calculate ETA to Boston (based on all-time progress)
     miles_remaining = TOTAL_ROUTE_DISTANCE - all_time_position["effective_miles"]
+    steps_to_boston = int(miles_remaining * settings.steps_per_mile)
     days_to_boston = None
     eta_date = None
     if avg_daily_miles > 0 and miles_remaining > 0:
@@ -361,6 +362,7 @@ async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: d
         "last_week_steps": last_week_steps,
         "week_comparison": week_comparison,
         "miles_remaining": round(miles_remaining, 1),
+        "steps_to_boston": steps_to_boston,
         "days_to_boston": days_to_boston,
         "eta_date": eta_date,
         "current_position": {

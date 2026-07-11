@@ -60,7 +60,8 @@ export function StatsCards({ stats }) {
     },
     {
       label: 'ETA Boston',
-      value: stats.eta_date ? parseLocalDate(stats.eta_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
+      value: stats.eta_date ? parseLocalDate(stats.eta_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '—',
+      valueClass: 'text-xl',
       subtext: stats.days_to_boston ? `${stats.days_to_boston} days` : null,
       icon: Calendar,
       color: 'bg-rose-500',
@@ -80,7 +81,7 @@ export function StatsCards({ stats }) {
             </div>
             <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</span>
           </div>
-          <p className="text-2xl font-semibold text-gray-900 dark:text-white font-heading">
+          <p className={`${card.valueClass ?? 'text-2xl'} font-semibold text-gray-900 dark:text-white font-heading`}>
             {card.value}
           </p>
           {card.subtext && (
