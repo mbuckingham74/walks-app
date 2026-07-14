@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useStats } from '../hooks/useStats';
 import { useSteps } from '../hooks/useSteps';
@@ -9,6 +10,7 @@ import { RouteMap } from './RouteMap';
 import { StepsChart } from './StepsChart';
 import { ProgressCard } from './ProgressCard';
 import { ROUTE_CONFIG } from '../config';
+import { interpolateRoutePosition } from '../lib/route';
 import { Map, Activity, Sun, Moon, TrendingUp, TrendingDown, Minus, ChevronRight, AlertCircle, BarChart3 } from 'lucide-react';
 
 export function Dashboard() {
@@ -24,6 +26,16 @@ export function Dashboard() {
 
   const isLoading = statsLoading || previousYearLoading || stepsLoading || routeLoading || configLoading;
   const errors = [statsError, previousYearError, stepsError, routeError, configError].filter(Boolean);
+
+  const ghostPosition = useMemo(() => {
+    if (!stats || !route || !config) return null;
+    const days = stats.all_time_total_days ?? 0;
+    if (days === 0) return null;
+    const ghostMiles = (days * config.daily_goal) / config.steps_per_mile;
+    const pos = interpolateRoutePosition(ghostMiles, route.waypoints, route.total_distance);
+    if (!pos) return null;
+    return { ...pos, goalSteps: config.daily_goal };
+  }, [stats, route, config]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -113,11 +125,24 @@ export function Dashboard() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {route?.total_distance?.toLocaleString() ?? '—'} miles from {ROUTE_CONFIG.startCity} to {ROUTE_CONFIG.endCity}
                   </p>
+                  {ghostPosition && (
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-primary-500" />
+                        You
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-2.5 h-2.5 rounded-full border-2 border-dashed border-amber-500" />
+                        Goal pace ({ghostPosition.goalSteps?.toLocaleString()}/day)
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="h-[400px]">
                   <RouteMap
                     route={route}
                     currentPosition={stats?.current_position}
+                    ghostPosition={ghostPosition}
                   />
                 </div>
               </div>

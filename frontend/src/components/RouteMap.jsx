@@ -36,6 +36,19 @@ const waypointIcon = createIcon('#3b82f6', 10);
 const startIcon = createIcon('#22c55e', 14);
 const endIcon = createIcon('#ef4444', 14);
 const currentIcon = createCurrentIcon();
+const ghostIcon = L.divIcon({
+  className: 'ghost-marker',
+  html: `<div style="
+    width: 18px;
+    height: 18px;
+    border: 3px dashed #f59e0b;
+    background: rgba(245, 158, 11, 0.15);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2), 0 2px 6px rgba(0,0,0,0.25);
+  "></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
 
 function MapBounds({ waypoints, currentPosition }) {
   const map = useMap();
@@ -50,7 +63,7 @@ function MapBounds({ waypoints, currentPosition }) {
   return null;
 }
 
-export function RouteMap({ route, currentPosition }) {
+export function RouteMap({ route, currentPosition, ghostPosition }) {
   const waypoints = route?.waypoints || [];
 
   const routeCoords = useMemo(() =>
@@ -161,6 +174,26 @@ export function RouteMap({ route, currentPosition }) {
                   {currentPosition.miles_to_next?.toFixed(1)} mi to {currentPosition.next_waypoint.city}
                 </p>
               )}
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
+      {/* Goal pace ghost marker */}
+      {ghostPosition && (
+        <Marker
+          position={[ghostPosition.lat, ghostPosition.lon]}
+          icon={ghostIcon}
+        >
+          <Popup>
+            <div className="text-sm">
+              <p className="font-semibold text-amber-600">Goal pace</p>
+              <p className="text-gray-600">
+                Where you&apos;d be at {ghostPosition.goalSteps?.toLocaleString()} steps/day every day
+              </p>
+              <p className="text-gray-600">
+                {ghostPosition.effective_miles?.toFixed(1)} miles
+              </p>
             </div>
           </Popup>
         </Marker>

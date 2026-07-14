@@ -95,5 +95,16 @@ export function emptyDetailedStats(year) {
       goal_met_days: 0,
       goal_met_percentage: 0,
     },
+    activity_calendar: { days: [] },
+    year_race: { current_year: year, previous_year: year - 1, goal_daily: 15000, current: [], previous: [] },
+    momentum: [],
+    record_chase: { today_steps: 0, today_date: null, top_10_threshold: 0, steps_to_top_10: 0, in_top_10: false },
+    weekly_finish_line: { week_start: null, week_end: null, current_steps: 0, weekly_goal: 105000, days_elapsed: 0, days_remaining: 0, required_daily_avg: 0 },
+    goal_surplus: [],
+    rolling_records: { best_7: null, best_14: null, best_30: null },
+    day_percentile: null,
+    milestone_timeline: { crossings_completed: 0, milestones: [] },
+    perfect_periods: { perfect_weeks: 0, best_goal_met_month: null, longest_5_of_7_run: 0 },
+    comeback_score: { attempts: 0, successes: 0, score: null },
   };
 }

@@ -5,6 +5,7 @@ import { StatsPage } from './StatsPage';
 
 const mockUseDetailedStats = vi.fn();
 const mockUseTheme = vi.fn();
+const mockUseConfig = vi.fn();
 
 vi.mock('../hooks/useDetailedStats', () => ({
   useDetailedStats: (...args) => mockUseDetailedStats(...args),
@@ -12,6 +13,10 @@ vi.mock('../hooks/useDetailedStats', () => ({
 
 vi.mock('../hooks/useTheme', () => ({
   useTheme: () => mockUseTheme(),
+}));
+
+vi.mock('../hooks/useConfig', () => ({
+  useConfig: () => mockUseConfig(),
 }));
 
 function renderPage() {
@@ -64,11 +69,49 @@ const baseStats = {
     goal_met_days: 110,
     goal_met_percentage: 84.6,
   },
+  activity_calendar: {
+    days: [
+      { date: '2026-01-01', steps: 18000, goal_met: true, intensity: 3 },
+      { date: '2026-01-02', steps: 5000, goal_met: false, intensity: 2 },
+    ],
+  },
+  year_race: {
+    current_year: 2026,
+    previous_year: 2025,
+    goal_daily: 15000,
+    current: [{ day_of_year: 1, cumulative_steps: 18000 }],
+    previous: [{ day_of_year: 1, cumulative_steps: 12000 }],
+  },
+  momentum: [
+    { date: '2026-01-07', steps: 18000, avg_7: 16000, avg_28: null },
+  ],
+  record_chase: { today_steps: 18000, today_date: '2026-05-10', top_10_threshold: 25000, steps_to_top_10: 7001, in_top_10: false },
+  weekly_finish_line: { week_start: '2026-05-04', week_end: '2026-05-10', current_steps: 60000, weekly_goal: 105000, days_elapsed: 7, days_remaining: 0, required_daily_avg: 0 },
+  goal_surplus: [
+    { date: '2026-01-01', surplus: 3000 },
+    { date: '2026-01-02', surplus: -10000 },
+  ],
+  rolling_records: {
+    best_7: { total_steps: 120000, avg_steps: 17142, start_date: '2026-05-04', end_date: '2026-05-10' },
+    best_14: { total_steps: 220000, avg_steps: 15714, start_date: '2026-05-04', end_date: '2026-05-17' },
+    best_30: { total_steps: 450000, avg_steps: 15000, start_date: '2026-05-04', end_date: '2026-06-02' },
+  },
+  day_percentile: { steps: 18000, date: '2026-05-10', percentile: 82.0 },
+  milestone_timeline: {
+    crossings_completed: 0,
+    milestones: [
+      { city: 'Seattle, WA', miles_from_start: 0, reached: true, date_reached: '2026-01-01' },
+      { city: 'Ellensburg, WA', miles_from_start: 107, reached: false, date_reached: null },
+    ],
+  },
+  perfect_periods: { perfect_weeks: 5, best_goal_met_month: { year: 2026, month: 5, month_name: 'May', total_steps: 500000, avg_steps: 16129, days_tracked: 31, goal_met_days: 28 }, longest_5_of_7_run: 8 },
+  comeback_score: { attempts: 20, successes: 14, score: 70.0 },
 };
 
 describe('StatsPage', () => {
   beforeEach(() => {
     mockUseTheme.mockReturnValue({ isDark: false, toggle: vi.fn() });
+    mockUseConfig.mockReturnValue({ config: { steps_per_mile: 1850, daily_goal: 15000 }, loading: false, error: null });
   });
 
   it('shows loading state', () => {

@@ -29,6 +29,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useDetailedStats } from '../hooks/useDetailedStats';
+import { useConfig } from '../hooks/useConfig';
 import { useTheme } from '../hooks/useTheme';
 import {
   formatNumber,
@@ -37,6 +38,17 @@ import {
   formatMonthYear,
   getChartColors,
 } from '../lib/stats';
+import { ActivityCalendar } from './visualizations/ActivityCalendar';
+import { YearRace } from './visualizations/YearRace';
+import { Momentum } from './visualizations/Momentum';
+import { RecordChase } from './visualizations/RecordChase';
+import { WeeklyFinishLine } from './visualizations/WeeklyFinishLine';
+import { GoalSurplus } from './visualizations/GoalSurplus';
+import { RollingRecords } from './visualizations/RollingRecords';
+import { DayPercentile } from './visualizations/DayPercentile';
+import { MilestoneTimeline } from './visualizations/MilestoneTimeline';
+import { PerfectPeriods } from './visualizations/PerfectPeriods';
+import { ComebackScore } from './visualizations/ComebackScore';
 
 const AVAILABLE_YEARS = [2026, 2025, 2024, 2023];
 
@@ -166,6 +178,7 @@ export function StatsPage() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const { stats, loading, error, refetch } = useDetailedStats(selectedYear);
+  const { config } = useConfig();
   const { isDark, toggle: toggleTheme } = useTheme();
   const colors = useMemo(() => getChartColors(isDark), [isDark]);
 
@@ -296,6 +309,17 @@ export function StatsPage() {
               />
             </div>
 
+            {/* Activity calendar */}
+            <ActivityCalendar data={data.activity_calendar} dailyGoal={config.daily_goal} />
+
+            {/* Today motivators */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <RecordChase data={data.record_chase} />
+              <DayPercentile data={data.day_percentile} />
+              <WeeklyFinishLine data={data.weekly_finish_line} />
+              <ComebackScore data={data.comeback_score} />
+            </div>
+
             {/* Leaderboards */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Section title="Top 10 Days" subtitle="Highest single-day step counts">
@@ -403,6 +427,12 @@ export function StatsPage() {
                 />
               </Section>
             </div>
+
+            {/* Year race */}
+            <YearRace data={data.year_race} isDark={isDark} />
+
+            {/* Momentum */}
+            <Momentum data={data.momentum} isDark={isDark} />
 
             {/* Charts row 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -551,6 +581,9 @@ export function StatsPage() {
               </div>
             </Section>
 
+            {/* Goal surplus */}
+            <GoalSurplus data={data.goal_surplus} isDark={isDark} />
+
             <Section title="Cumulative Steps" subtitle="Total steps accumulated over the year">
               <div className="h-80">
                 {data.cumulative_data.length > 0 ? (
@@ -621,6 +654,12 @@ export function StatsPage() {
               </div>
             </Section>
 
+            {/* Rolling records */}
+            <RollingRecords data={data.rolling_records} />
+
+            {/* Perfect periods */}
+            <PerfectPeriods data={data.perfect_periods} />
+
             {/* Insight cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-200">
@@ -681,6 +720,9 @@ export function StatsPage() {
                 )}
               </div>
             </div>
+
+            {/* Milestone timeline */}
+            <MilestoneTimeline data={data.milestone_timeline} />
 
             {/* Consistency */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-200">
