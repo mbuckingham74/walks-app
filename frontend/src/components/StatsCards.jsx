@@ -1,4 +1,4 @@
-import { MapPin, Footprints, Trophy, Navigation, TrendingUp, Flame, Target, Calendar } from 'lucide-react';
+import { MapPin, Footprints, Trophy, Navigation, TrendingUp, Flame, Target, Calendar, CalendarCheck } from 'lucide-react';
 import { parseLocalDate } from '../lib/dates';
 
 export function StatsCards({ stats }) {
@@ -65,6 +65,14 @@ export function StatsCards({ stats }) {
       subtext: stats.days_to_boston ? `${stats.days_to_boston} days` : null,
       icon: Calendar,
       color: 'bg-rose-500',
+    },
+    {
+      label: 'Goal-Pace Finish',
+      value: stats.goal_pace_finish_date ? parseLocalDate(stats.goal_pace_finish_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '—',
+      valueClass: 'text-xl',
+      subtext: stats.goal_pace_days ? `${stats.goal_pace_days} days from start` : null,
+      icon: CalendarCheck,
+      color: 'bg-indigo-500',
     },
   ];
 

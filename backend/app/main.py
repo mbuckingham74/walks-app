@@ -167,7 +167,8 @@ async def _fetch_aggregates(db: AsyncSession, year: int, today: date, settings: 
                     FROM daily_steps
                     ORDER BY steps DESC, step_date ASC
                     LIMIT 1
-                ) as best_day_date
+                ) as best_day_date,
+                MIN(step_date) as first_date
             FROM daily_steps
         """),
         {"daily_goal": settings.daily_goal}
@@ -203,6 +204,7 @@ async def _fetch_aggregates(db: AsyncSession, year: int, today: date, settings: 
         "all_time_max": int(all_time_row[3]),
         "all_time_goal_met": int(all_time_row[4]),
         "all_time_best_day_date": all_time_row[5],
+        "all_time_first_date": all_time_row[6],
         "this_week_steps": int(week_row[0]),
         "last_week_steps": int(week_row[1]),
     }
@@ -229,6 +231,7 @@ async def _compute_data_hash(aggregates: dict, today: date, settings: Settings) 
         str(aggregates["all_time_max"]),
         str(aggregates["all_time_goal_met"]),
         str(aggregates["all_time_best_day_date"]),
+        str(aggregates["all_time_first_date"]),
         str(aggregates["this_week_steps"] + aggregates["last_week_steps"]),
         today.isoformat(),
         str(settings.steps_per_mile),
@@ -346,6 +349,17 @@ async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: d
         days_to_boston = int(miles_remaining / avg_daily_miles)
         eta_date = (today + timedelta(days=days_to_boston)).isoformat()
 
+    # Counterfactual: date the route would have first been completed if every
+    # tracked day had met exactly the daily goal. Pure all-time projection from
+    # the first recorded step date.
+    first_date = aggregates.get("all_time_first_date")
+    goal_pace_miles_per_day = settings.daily_goal / settings.steps_per_mile
+    goal_pace_finish_date = None
+    goal_pace_days = None
+    if first_date and goal_pace_miles_per_day > 0:
+        goal_pace_days = int(round(TOTAL_ROUTE_DISTANCE / goal_pace_miles_per_day))
+        goal_pace_finish_date = (first_date + timedelta(days=goal_pace_days)).isoformat()
+
     return {
         "year": year,
         "total_distance_miles": round(total_distance, 2),
@@ -365,6 +379,8 @@ async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: d
         "steps_to_boston": steps_to_boston,
         "days_to_boston": days_to_boston,
         "eta_date": eta_date,
+        "goal_pace_finish_date": goal_pace_finish_date,
+        "goal_pace_days": goal_pace_days,
         "current_position": {
             "lat": all_time_position["lat"],
             "lon": all_time_position["lon"],
