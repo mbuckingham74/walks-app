@@ -21,6 +21,8 @@ from app.detailed_stats import (
     _compute_milestone_timeline,
     _compute_perfect_periods,
     _compute_comeback_score,
+    _previous_year_cutoff,
+    _set_cached_detailed_stats,
     _week_start_end,
 )
 
@@ -178,6 +180,12 @@ class TestYearRace:
         assert race.current[-1].day_of_year == 2
         assert race.previous[-1].cumulative_steps == 5000
 
+    def test_previous_year_cutoff_matches_elapsed_day(self):
+        assert _previous_year_cutoff(2026, date(2026, 7, 13)) == date(2025, 7, 13)
+
+    def test_previous_year_cutoff_handles_leap_year_length(self):
+        assert _previous_year_cutoff(2024, date(2025, 1, 1)) == date(2023, 12, 31)
+
     def test_empty_years(self):
         race = _compute_year_race([], [], 2026, 15000)
         assert race.current == []
@@ -292,6 +300,21 @@ class TestPerfectPeriods:
         assert pp.perfect_weeks == 1
         assert pp.longest_5_of_7_run == 1
 
+    def test_missing_week_breaks_5_of_7_streak(self):
+        rows = []
+        for monday in (date(2026, 1, 5), date(2026, 1, 19)):
+            rows.extend(
+                {"date": monday + timedelta(days=i), "steps": 16000}
+                for i in range(5)
+            )
+        monthly = _compute_monthly_totals(rows, 2026, 15000)
+
+        pp = _compute_perfect_periods(
+            rows, 2026, date(2026, 1, 27), 15000, monthly
+        )
+
+        assert pp.longest_5_of_7_run == 1
+
     def test_no_data_returns_zeros(self):
         pp = _compute_perfect_periods([], 2026, date(2026, 1, 20), 15000, [])
         assert pp.perfect_weeks == 0
@@ -318,6 +341,18 @@ class TestComebackScore:
         score = _compute_comeback_score(rows, 15000)
         assert score.attempts == 0
         assert score.score is None
+
+
+class TestDetailedStatsCache:
+    @pytest.mark.asyncio
+    async def test_write_and_rollback_failures_are_non_fatal(self):
+        db = AsyncMock()
+        db.execute.side_effect = RuntimeError("cache unavailable")
+        db.rollback.side_effect = RuntimeError("connection unavailable")
+
+        await _set_cached_detailed_stats(db, 2026, "hash", {"year": 2026})
+
+        db.rollback.assert_awaited_once()
 
 
 class TestDetailedStatsEndpoint:

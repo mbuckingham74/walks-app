@@ -36,6 +36,23 @@ class TestConfigEndpoint:
         assert data["daily_goal"] == 15000
 
 
+class TestGoalPaceProjection:
+    def test_counts_start_date_as_first_walking_day_and_rounds_up(self):
+        from app.main import _compute_goal_pace_projection
+
+        days, finish_date = _compute_goal_pace_projection(
+            date(2026, 1, 1), daily_goal=15000, steps_per_mile=1850
+        )
+
+        assert days == 352
+        assert finish_date == "2026-12-18"
+
+    def test_returns_none_without_a_start_date(self):
+        from app.main import _compute_goal_pace_projection
+
+        assert _compute_goal_pace_projection(None, 15000, 1850) == (None, None)
+
+
 class TestActivitiesEndpoint:
     def test_activities_without_api_key_returns_401(self, client):
         resp = client.get("/api/activities")

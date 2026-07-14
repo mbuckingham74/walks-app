@@ -1,9 +1,10 @@
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import (
-    Column, Integer, BigInteger, String, Text, Date, DateTime,
+    Column, Integer, BigInteger, String, Date, DateTime,
     DECIMAL, func
 )
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from app.database import Base
 
 
@@ -44,7 +45,7 @@ class StatsCache(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     year = Column(Integer, unique=True, nullable=False)
-    stats_json = Column(Text, nullable=False)  # JSON blob of full stats response
+    stats_json = Column(MEDIUMTEXT, nullable=False)  # JSON blob of full stats response
     data_hash = Column(String(64), nullable=False)  # Hash of underlying data for invalidation
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -56,7 +57,7 @@ class DetailedStatsCache(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     year = Column(Integer, unique=True, nullable=False)
-    stats_json = Column(Text, nullable=False)
+    stats_json = Column(MEDIUMTEXT, nullable=False)
     data_hash = Column(String(64), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

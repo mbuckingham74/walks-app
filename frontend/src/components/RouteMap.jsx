@@ -192,7 +192,7 @@ export function RouteMap({ route, currentPosition, ghostPosition }) {
                 Where you&apos;d be at {ghostPosition.goalSteps?.toLocaleString()} steps/day every day
               </p>
               <p className="text-gray-600">
-                {ghostPosition.effective_miles?.toFixed(1)} miles
+                {ghostPosition.effectiveMiles?.toFixed(1)} miles
               </p>
             </div>
           </Popup>

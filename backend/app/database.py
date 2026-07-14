@@ -1,6 +1,7 @@
 import functools
 import logging
 
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
@@ -70,6 +71,30 @@ async def get_db() -> AsyncSession:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # create_all() does not modify existing columns. Upgrade persistent
+        # installations that originally created these cache values as TEXT.
+        result = await conn.execute(text("""
+            SELECT TABLE_NAME, DATA_TYPE
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND COLUMN_NAME = 'stats_json'
+              AND TABLE_NAME IN ('stats_cache', 'detailed_stats_cache')
+        """))
+        column_types = {row[0]: row[1].lower() for row in result.all()}
+        migrations = {
+            "stats_cache": text(
+                "ALTER TABLE stats_cache MODIFY COLUMN stats_json MEDIUMTEXT NOT NULL"
+            ),
+            "detailed_stats_cache": text(
+                "ALTER TABLE detailed_stats_cache "
+                "MODIFY COLUMN stats_json MEDIUMTEXT NOT NULL"
+            ),
+        }
+        for table_name, statement in migrations.items():
+            if column_types.get(table_name) not in {"mediumtext", "longtext"}:
+                logger.info("Upgrading %s.stats_json to MEDIUMTEXT", table_name)
+                await conn.execute(statement)
 
 
 async def dispose_engine():

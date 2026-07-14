@@ -620,6 +620,21 @@ def _calendar_day_range(year: int, today: date) -> list[date]:
     return days
 
 
+def _previous_year_cutoff(year: int, today: date) -> date:
+    """Match the prior-year comparison to the selected year's elapsed days."""
+    period_start = date(year, 1, 1)
+    period_end = min(today, date(year, 12, 31))
+    previous_start = date(year - 1, 1, 1)
+    if period_end < period_start:
+        return previous_start - timedelta(days=1)
+
+    elapsed_days = (period_end - period_start).days
+    return min(
+        previous_start + timedelta(days=elapsed_days),
+        date(year - 1, 12, 31),
+    )
+
+
 def _compute_activity_calendar(
     rows: list[dict], year: int, today: date, daily_goal: int
 ) -> ActivityCalendarSchema:
@@ -846,17 +861,15 @@ def _compute_perfect_periods(
     monthly_totals: list[MonthlyTotalSchema],
 ) -> PerfectPeriodsSchema:
     steps_map = {r["date"]: r["steps"] for r in rows}
-    weeks: dict[tuple[int, int], list[dict]] = defaultdict(list)
-    for r in rows:
-        iso_year, iso_week, _ = r["date"].isocalendar()
-        weeks[(iso_year, iso_week)].append(r)
-
     perfect_weeks = 0
     week_5_of_7_flags: list[bool] = []
-    for (iy, iw) in sorted(weeks.keys()):
-        monday, sunday = _week_start_end(iy, iw)
-        if sunday >= today:
-            continue
+    year_start = date(year, 1, 1)
+    period_end = min(today - timedelta(days=1), date(year, 12, 31))
+    monday = year_start + timedelta(days=(-year_start.weekday()) % 7)
+
+    # Walk every full, completed calendar week in the selected year. Iterating
+    # only weeks with rows would incorrectly join streaks across a missing week.
+    while monday + timedelta(days=6) <= period_end:
         met_days = sum(
             1 for i in range(7)
             if steps_map.get(monday + timedelta(days=i), 0) >= daily_goal
@@ -864,6 +877,7 @@ def _compute_perfect_periods(
         if met_days == 7:
             perfect_weeks += 1
         week_5_of_7_flags.append(met_days >= 5)
+        monday += timedelta(days=7)
 
     longest_5_of_7_run = 0
     current_run = 0
@@ -921,7 +935,9 @@ async def _compute_detailed_stats(
 ) -> dict:
     """Compute the full detailed-stats payload."""
     rows = await _fetch_daily_steps_for_year(db, year, today)
-    previous_rows = await _fetch_daily_steps_for_year(db, year - 1, today)
+    previous_rows = await _fetch_daily_steps_for_year(
+        db, year - 1, _previous_year_cutoff(year, today)
+    )
     all_rows = await _fetch_all_daily_steps(db)
 
     year_race = _compute_year_race(rows, previous_rows, year, settings.daily_goal)
@@ -1120,7 +1136,10 @@ async def _set_cached_detailed_stats(
         await db.commit()
     except Exception:
         logger.warning(f"Failed to cache detailed stats for year {year}", exc_info=True)
-        await db.rollback()
+        try:
+            await db.rollback()
+        except Exception:
+            logger.warning("Failed to roll back detailed stats cache write", exc_info=True)
 
 
 async def get_detailed_stats(

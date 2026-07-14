@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import math
 import secrets
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
@@ -305,6 +306,21 @@ async def _calculate_streak_sql(
     return result.scalar() or 0
 
 
+def _compute_goal_pace_projection(
+    first_date: Optional[date], daily_goal: int, steps_per_mile: int
+) -> tuple[Optional[int], Optional[str]]:
+    """Return inclusive walking days and finish date at exactly goal pace."""
+    if first_date is None or daily_goal <= 0 or steps_per_mile <= 0:
+        return None, None
+
+    route_steps = TOTAL_ROUTE_DISTANCE * steps_per_mile
+    days = math.ceil(route_steps / daily_goal)
+    # The first recorded date is day one, so N walking days span N - 1
+    # calendar-day offsets.
+    finish_date = first_date + timedelta(days=days - 1)
+    return days, finish_date.isoformat()
+
+
 async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: date, settings: Settings) -> dict:
     """Compute all statistics using pre-fetched aggregates plus streak queries."""
     total_steps = aggregates["year_sum"]
@@ -352,13 +368,11 @@ async def _compute_stats(db: AsyncSession, aggregates: dict, year: int, today: d
     # Counterfactual: date the route would have first been completed if every
     # tracked day had met exactly the daily goal. Pure all-time projection from
     # the first recorded step date.
-    first_date = aggregates.get("all_time_first_date")
-    goal_pace_miles_per_day = settings.daily_goal / settings.steps_per_mile
-    goal_pace_finish_date = None
-    goal_pace_days = None
-    if first_date and goal_pace_miles_per_day > 0:
-        goal_pace_days = int(round(TOTAL_ROUTE_DISTANCE / goal_pace_miles_per_day))
-        goal_pace_finish_date = (first_date + timedelta(days=goal_pace_days)).isoformat()
+    goal_pace_days, goal_pace_finish_date = _compute_goal_pace_projection(
+        aggregates.get("all_time_first_date"),
+        settings.daily_goal,
+        settings.steps_per_mile,
+    )
 
     return {
         "year": year,
@@ -451,7 +465,10 @@ async def get_stats(
         await db.commit()
     except Exception:
         logger.warning(f"Failed to cache stats for year {year}", exc_info=True)
-        await db.rollback()
+        try:
+            await db.rollback()
+        except Exception:
+            logger.warning("Failed to roll back stats cache write", exc_info=True)
 
     return stats
 
