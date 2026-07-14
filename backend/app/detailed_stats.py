@@ -1115,8 +1115,12 @@ async def _set_cached_detailed_stats(
         stats_json=stats_json,
         data_hash=data_hash,
     )
-    await db.execute(stmt)
-    await db.commit()
+    try:
+        await db.execute(stmt)
+        await db.commit()
+    except Exception:
+        logger.warning(f"Failed to cache detailed stats for year {year}", exc_info=True)
+        await db.rollback()
 
 
 async def get_detailed_stats(

@@ -430,8 +430,12 @@ async def get_stats(
         stats_json=stats_json,
         data_hash=current_hash
     )
-    await db.execute(stmt)
-    await db.commit()
+    try:
+        await db.execute(stmt)
+        await db.commit()
+    except Exception:
+        logger.warning(f"Failed to cache stats for year {year}", exc_info=True)
+        await db.rollback()
 
     return stats
 
